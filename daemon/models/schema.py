@@ -1,6 +1,7 @@
 """Pydantic models for Waveriders unified configuration schema"""
 
-from typing import Literal
+import ipaddress
+from typing import List, Literal
 from pydantic import BaseModel, Field, field_validator
 
 
@@ -44,4 +45,65 @@ class NetworkIdentity(BaseModel):
         """Validate MNC is 2-3 digits"""
         if not v.isdigit() or len(v) not in [2, 3]:
             raise ValueError("Network code must be 2-3 digits")
+        return v
+
+
+class IPAddressing(BaseModel):
+    """IP addressing configuration"""
+
+    architecture: Literal["direct_routing"] = Field(
+        default="direct_routing",
+        description="Waveriders standard: devices directly routable on LAN"
+    )
+    core_address: str = Field(
+        ...,
+        description="IP address of core control plane (MME/AMF)",
+        examples=["10.48.0.5"]
+    )
+    device_pool: str = Field(
+        ...,
+        description="CIDR subnet for device IP assignments",
+        examples=["10.48.99.0/24"]
+    )
+    device_gateway: str = Field(
+        ...,
+        description="Gateway IP for devices (ogstun interface)",
+        examples=["10.48.99.1"]
+    )
+    dns_servers: List[str] = Field(
+        default=["8.8.8.8", "8.8.4.4"],
+        description="DNS servers for device internet access"
+    )
+
+    @field_validator("core_address", "device_gateway")
+    @classmethod
+    def validate_ip_address(cls, v: str) -> str:
+        """Validate IP address format"""
+        try:
+            ipaddress.ip_address(v)
+        except ValueError:
+            raise ValueError(f"Invalid IP address: {v}")
+        return v
+
+    @field_validator("device_pool")
+    @classmethod
+    def validate_cidr(cls, v: str) -> str:
+        """Validate CIDR notation"""
+        if "/" not in v:
+            raise ValueError(f"Invalid CIDR notation: {v} (missing /prefix)")
+        try:
+            ipaddress.ip_network(v, strict=False)
+        except ValueError:
+            raise ValueError(f"Invalid CIDR notation: {v}")
+        return v
+
+    @field_validator("dns_servers")
+    @classmethod
+    def validate_dns_servers(cls, v: List[str]) -> List[str]:
+        """Validate DNS server IPs"""
+        for dns in v:
+            try:
+                ipaddress.ip_address(dns)
+            except ValueError:
+                raise ValueError(f"Invalid DNS server IP: {dns}")
         return v
