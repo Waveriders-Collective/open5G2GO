@@ -167,6 +167,99 @@ class SubscriberManager:
                 error=str(e)
             )
 
+    def get_subscriber(self, imsi: str) -> Optional[Dict[str, Any]]:
+        """Get subscriber by IMSI
+
+        Args:
+            imsi: Subscriber IMSI
+
+        Returns:
+            Subscriber document or None if not found
+        """
+        try:
+            return self.subscribers.find_one({"imsi": imsi})
+        except PyMongoError:
+            return None
+
+    def update_subscriber_qos(self, imsi: str, qos_policy: QoSPolicy) -> Result:
+        """Update subscriber QoS policy
+
+        Args:
+            imsi: Subscriber IMSI
+            qos_policy: New QoS policy to apply
+
+        Returns:
+            Result with success/failure status
+        """
+        try:
+            # Convert Mbps to Kbps
+            uplink_kbps = qos_policy.uplink_mbps * 1000
+            downlink_kbps = qos_policy.downlink_mbps * 1000
+            qos_index = qos_policy.priority_level
+
+            # Update QoS and AMBR
+            update_doc = {
+                "$set": {
+                    "slice_qos.qos_index": qos_index,
+                    "slice_qos.session.0.qos.index": qos_index,
+                    "slice_qos.session.0.qos.arp.priority_level": qos_policy.priority_level,
+                    "slice_qos.session.0.ambr.uplink": {"value": uplink_kbps, "unit": 1},
+                    "slice_qos.session.0.ambr.downlink": {"value": downlink_kbps, "unit": 1},
+                    "ambr.uplink": {"value": uplink_kbps, "unit": 1},
+                    "ambr.downlink": {"value": downlink_kbps, "unit": 1}
+                }
+            }
+
+            result = self.subscribers.update_one({"imsi": imsi}, update_doc)
+
+            if result.modified_count > 0:
+                return Result(
+                    success=True,
+                    message=f"Subscriber {imsi} QoS updated successfully"
+                )
+            else:
+                return Result(
+                    success=False,
+                    message=f"Subscriber {imsi} not found or not modified"
+                )
+
+        except PyMongoError as e:
+            return Result(
+                success=False,
+                message="Failed to update subscriber QoS",
+                error=str(e)
+            )
+
+    def remove_subscriber(self, imsi: str) -> Result:
+        """Remove subscriber from MongoDB
+
+        Args:
+            imsi: Subscriber IMSI to remove
+
+        Returns:
+            Result with success/failure status
+        """
+        try:
+            result = self.subscribers.delete_one({"imsi": imsi})
+
+            if result.deleted_count > 0:
+                return Result(
+                    success=True,
+                    message=f"Subscriber {imsi} removed successfully"
+                )
+            else:
+                return Result(
+                    success=False,
+                    message=f"Subscriber {imsi} not found"
+                )
+
+        except PyMongoError as e:
+            return Result(
+                success=False,
+                message="Failed to remove subscriber",
+                error=str(e)
+            )
+
     def close(self):
         """Close MongoDB connection"""
         if self._client:

@@ -79,3 +79,86 @@ def test_subscriber_manager_add_subscriber(mock_mongo_client):
 
     assert result.success is True
     mock_collection.insert_one.assert_called_once()
+
+
+@patch('daemon.core.open5gs.subscriber_manager.MongoClient')
+def test_subscriber_manager_get_subscriber(mock_mongo_client):
+    """Test getting a subscriber from MongoDB"""
+    # Mock MongoDB
+    mock_collection = Mock()
+    mock_collection.find_one.return_value = {
+        "imsi": "315010000000001",
+        "k": "465B5CE8B199B49FAA5F0A2EE238A6BC",
+        "opc": "E8ED289DEBA952E4283B54E88E6183CA"
+    }
+    mock_db = Mock()
+    mock_db.subscribers = mock_collection
+    mock_client = MagicMock()
+    mock_client.__getitem__.return_value = mock_db
+    mock_mongo_client.return_value = mock_client
+
+    manager = SubscriberManager(
+        mongodb_uri="mongodb://localhost:27017",
+        database_name="open5gs"
+    )
+
+    subscriber = manager.get_subscriber("315010000000001")
+
+    assert subscriber is not None
+    assert subscriber["imsi"] == "315010000000001"
+    mock_collection.find_one.assert_called_once_with({"imsi": "315010000000001"})
+
+
+@patch('daemon.core.open5gs.subscriber_manager.MongoClient')
+def test_subscriber_manager_update_subscriber_qos(mock_mongo_client):
+    """Test updating subscriber QoS"""
+    # Mock MongoDB
+    mock_collection = Mock()
+    mock_collection.update_one.return_value = Mock(modified_count=1)
+    mock_db = Mock()
+    mock_db.subscribers = mock_collection
+    mock_client = MagicMock()
+    mock_client.__getitem__.return_value = mock_db
+    mock_mongo_client.return_value = mock_client
+
+    manager = SubscriberManager(
+        mongodb_uri="mongodb://localhost:27017",
+        database_name="open5gs"
+    )
+
+    qos = QoSPolicy(
+        name="standard",
+        description="Standard",
+        priority_level=5,
+        guaranteed_bandwidth=False,
+        uplink_mbps=10,
+        downlink_mbps=5
+    )
+
+    result = manager.update_subscriber_qos("315010000000001", qos)
+
+    assert result.success is True
+    mock_collection.update_one.assert_called_once()
+
+
+@patch('daemon.core.open5gs.subscriber_manager.MongoClient')
+def test_subscriber_manager_remove_subscriber(mock_mongo_client):
+    """Test removing a subscriber"""
+    # Mock MongoDB
+    mock_collection = Mock()
+    mock_collection.delete_one.return_value = Mock(deleted_count=1)
+    mock_db = Mock()
+    mock_db.subscribers = mock_collection
+    mock_client = MagicMock()
+    mock_client.__getitem__.return_value = mock_db
+    mock_mongo_client.return_value = mock_client
+
+    manager = SubscriberManager(
+        mongodb_uri="mongodb://localhost:27017",
+        database_name="open5gs"
+    )
+
+    result = manager.remove_subscriber("315010000000001")
+
+    assert result.success is True
+    mock_collection.delete_one.assert_called_once_with({"imsi": "315010000000001"})
