@@ -149,6 +149,33 @@ services:
       retries: 5
       start_period: 20s
 
+  # PCRF - Policy and Charging Rules Function
+  pcrf:
+    build:
+      context: ./open5gs
+      dockerfile: Dockerfile
+    container_name: open5g2go-pcrf
+    restart: unless-stopped
+    command: open5gs-pcrfd
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    environment:
+      - DB_URI=mongodb://mongodb/open5gs
+    volumes:
+      - ./open5gs/config/pcrf.yaml:/etc/open5gs/pcrf.yaml:ro
+      - ./open5gs/config/freeDiameter:/etc/freeDiameter:ro
+      - open5gs_logs:/var/log/open5gs
+    networks:
+      open5g2go:
+        ipv4_address: 172.26.0.16
+    healthcheck:
+      test: ["CMD", "pgrep", "-f", "open5gs-pcrfd"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
   # SMF - Session Management Function (PGW-C in 4G terms)
   smf:
     build:
@@ -159,6 +186,8 @@ services:
     command: open5gs-smfd
     depends_on:
       upf:
+        condition: service_healthy
+      pcrf:
         condition: service_healthy
     volumes:
       - ./open5gs/config/smf.yaml:/etc/open5gs/smf.yaml:ro

@@ -1,0 +1,16 @@
+# Open5GS PCRF (Policy and Charging Rules Function) Configuration
+# Provides policy control for 4G EPC sessions
+
+logger:
+  file:
+    path: /var/log/open5gs/pcrf.log
+  level: info
+
+global:
+  max:
+    ue: 100
+
+db_uri: mongodb://mongodb/open5gs
+
+pcrf:
+  freeDiameter: /etc/freeDiameter/pcrf.conf

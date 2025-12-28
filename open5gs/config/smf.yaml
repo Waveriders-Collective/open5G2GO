@@ -11,8 +11,8 @@ global:
     ue: 100
 
 smf:
-  # freeDiameter disabled - no PCRF needed for homelab
-  # freeDiameter: /etc/freeDiameter/smf.conf
+  # freeDiameter for Gx interface to PCRF (policy control)
+  freeDiameter: /etc/freeDiameter/smf.conf
 
   # GTP-C interface (from MME and SGWC)
   gtpc:

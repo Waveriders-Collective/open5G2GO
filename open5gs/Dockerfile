@@ -34,6 +34,7 @@ RUN apt-get update && \
     open5gs-sgwu \
     open5gs-smf \
     open5gs-upf \
+    open5gs-pcrf \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 

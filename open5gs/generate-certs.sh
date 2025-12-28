@@ -43,6 +43,7 @@ generate_cert() {
 generate_cert "hss" "hss.open5g2go.local"
 generate_cert "mme" "mme.open5g2go.local"
 generate_cert "smf" "smf.open5g2go.local"
+generate_cert "pcrf" "pcrf.open5g2go.local"
 
 # Set permissions
 chmod 644 *.pem
