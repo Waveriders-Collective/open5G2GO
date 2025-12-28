@@ -28,6 +28,22 @@ if [ "$1" = "open5gs-upfd" ]; then
 
     # Setup NAT for UE traffic (10.48.99.0/24 is our UE pool)
     iptables -t nat -A POSTROUTING -s 10.48.99.0/24 ! -o ogstun -j MASQUERADE 2>/dev/null || true
+
+    # Background task to configure ogstun after UPF creates it
+    (
+        echo "Waiting for ogstun interface..."
+        for i in $(seq 1 30); do
+            if ip link show ogstun >/dev/null 2>&1; then
+                echo "Configuring ogstun interface..."
+                ip link set ogstun up
+                ip addr add 10.48.99.1/24 dev ogstun 2>/dev/null || true
+                echo "ogstun configured: $(ip addr show ogstun | grep inet)"
+                exit 0
+            fi
+            sleep 1
+        done
+        echo "WARNING: ogstun interface not found after 30 seconds"
+    ) &
 fi
 
 # For SGWU: Similar network setup
