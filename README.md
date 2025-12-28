@@ -1,17 +1,150 @@
-# openSurfControl
+# Open5G2GO
 
-Web-based management platform for private 4G/5G cellular networks.
+**Private Beta - Invite Only**
 
-## Components
-
-- **daemon/** - Core Management Daemon (Python)
-- **api/** - FastAPI Backend
-- **frontend/** - React Frontend
+Homelab toolkit for private 4G cellular networks, combining:
+- **Open5GS** (open-source mobile core) via docker_open5gs
+- **openSurfControl** (web-based management UI)
+- **Waveriders-tested configurations** for broadcast, CCTV, and event production
 
 ## Quick Start
 
-See individual component READMEs for setup instructions.
+```bash
+# Clone the repository
+git clone git@github.com:Waveriders-Collective/open5g2go.git
+cd open5g2go
 
-## Documentation
+# Start the stack
+docker-compose up -d
 
-Design document: `docs/plans/2025-10-31-opensurfcontrol-design.md`
+# Wait for startup (~90 seconds)
+sleep 90 && docker-compose ps
+
+# Access Web UI
+open http://localhost:8080
+```
+
+## Project Status
+
+**Version:** 0.1.0-beta
+**Status:** Phase 1 Complete - Repository Setup
+
+### MVP Scope
+
+| Feature | Specification |
+|---------|---------------|
+| Network Type | 4G LTE only |
+| Mobile Core | Open5GS |
+| PLMN | 315-010 (US private network) |
+| Devices | 10 max, static IP assignment |
+| UE IP Pool | 10.48.99.0/24 |
+| QoS Profile | Single profile, best-effort (QCI 9) |
+| Radio | Single Baicells eNodeB |
+
+### Not Included (Future Phases)
+- 5G SA support
+- Multiple QoS profiles
+- Multiple eNodeB support
+- TLS/HTTPS (lab environment)
+- Prometheus monitoring
+
+## Architecture
+
+```
+open5g2go/
+├── opensurfcontrol/      # MCP server + MongoDB adapter
+│   ├── server.py         # MCP tools
+│   ├── mongodb_client.py # Open5GS database adapter
+│   ├── constants.py      # Network configuration
+│   └── ...
+├── web_backend/          # FastAPI REST API
+│   ├── main.py           # API server
+│   └── api/              # Routes and models
+├── web_frontend/         # React TypeScript SPA
+│   └── src/              # UI components
+├── open5gs/              # Open5GS configurations
+└── docker-compose.yml    # Full stack deployment
+```
+
+## Components
+
+### openSurfControl (MCP Server)
+Python package providing tools for Open5GS subscriber management:
+- `list_subscribers` - List all provisioned devices
+- `get_subscriber` - Get device details by IMSI
+- `add_subscriber` - Provision new device
+- `update_subscriber` - Update device configuration
+- `delete_subscriber` - Remove device
+- `get_system_status` - System health dashboard
+- `get_network_config` - Network configuration
+
+### Web Backend (FastAPI)
+REST API exposing subscriber management:
+- `GET /api/v1/subscribers` - List devices
+- `POST /api/v1/subscribers` - Add device
+- `GET /api/v1/subscribers/{imsi}` - Get device
+- `PUT /api/v1/subscribers/{imsi}` - Update device
+- `DELETE /api/v1/subscribers/{imsi}` - Delete device
+- `GET /api/v1/status` - System status
+- `GET /api/v1/config` - Network config
+
+### Web Frontend (React)
+Single-page application with:
+- Dashboard with system status
+- Device management (CRUD)
+- Network configuration view
+
+## SIM Configuration
+
+Waveriders provides pre-programmed SIMs with:
+- PLMN: 315-010
+- IMSI range: 315010000000001 - 315010000009999
+
+Users enter only the last 4 digits when adding a device:
+```
+User enters: 0001
+Full IMSI:   315010000000001
+```
+
+## Development
+
+### Prerequisites
+- Python 3.10+
+- Node.js 18+
+- Docker & Docker Compose
+
+### Local Development
+
+```bash
+# Install Python dependencies
+poetry install
+
+# Install frontend dependencies
+cd web_frontend && npm install && cd ..
+
+# Run backend (development mode)
+DEBUG=true poetry run opensurfcontrol-web
+
+# Run frontend (development mode)
+cd web_frontend && npm run dev
+```
+
+### Testing
+
+```bash
+# Run Python tests
+poetry run pytest
+
+# Run frontend linting
+cd web_frontend && npm run lint
+```
+
+## License
+
+Private - Waveriders Collective
+
+## Support
+
+For beta testers, please report issues to:
+- GitHub Issues (private repo)
+- Waveriders Slack #open5g2go-beta

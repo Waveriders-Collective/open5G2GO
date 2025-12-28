@@ -1,0 +1,29 @@
+FROM python:3.10-slim
+
+# Set working directory
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    openssh-client \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy project files
+COPY pyproject.toml .
+COPY surfcontrol_mcp/ ./surfcontrol_mcp/
+COPY web_backend/ ./web_backend/
+
+# Install Python dependencies
+RUN pip install --no-cache-dir -e .
+
+# Create directory for SSH keys
+RUN mkdir -p /root/.ssh && chmod 700 /root/.ssh
+
+# Expose port
+EXPOSE 8000
+
+# Set environment variables
+ENV PYTHONUNBUFFERED=1
+
+# Run the FastAPI server
+CMD ["uvicorn", "web_backend.main:app", "--host", "0.0.0.0", "--port", "8000"]
