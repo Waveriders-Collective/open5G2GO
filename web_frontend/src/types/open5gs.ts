@@ -146,3 +146,50 @@ export interface SubscriberOperationResponse {
   changes?: string[];
   error?: string;
 }
+
+// eNodeB and SAS Status types
+export interface GrantInfo {
+  grant_id: string;
+  state: string;
+  frequency_mhz: number;
+  max_eirp_dbm: number;
+  channel_type: 'GAA' | 'PAL';
+  expire_time: string;
+}
+
+export interface ENodeBStatus {
+  serial_number: string;
+  fcc_id: string;
+  sas_state: string;
+  config_name: string;
+  location: string;
+  active_grant?: GrantInfo;
+  grants: GrantInfo[];
+}
+
+export interface EnodebStatusResponse {
+  timestamp: string;
+  s1ap: {
+    available: boolean;
+    connected_count: number;
+    enodebs: ENodeBStatus[];
+  };
+  sas: {
+    available: boolean;
+    registered_count: number;
+    authorized_count: number;
+    enodebs: ENodeBStatus[];
+  };
+}
+
+export interface GrantHistoryResponse {
+  serial_number: string;
+  timestamp: string;
+  history: GrantInfo[];
+}
+
+export interface RefreshSasResponse {
+  success: boolean;
+  message: string;
+  timestamp: string;
+}
