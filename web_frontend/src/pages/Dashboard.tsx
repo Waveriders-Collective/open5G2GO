@@ -135,6 +135,18 @@ export const Dashboard: React.FC = () => {
     return `${kbps} kbps`;
   };
 
+  // Calculate frequency from EARFCN (Band 48 CBRS)
+  const earfcnToFrequency = (earfcn?: number, band?: number): string => {
+    if (!earfcn) return 'N/A';
+    // Band 48 (CBRS): 3550-3700 MHz, EARFCN 55240-56739
+    if (band === 48 || (earfcn >= 55240 && earfcn <= 56739)) {
+      const freqMhz = 3550 + 0.1 * (earfcn - 55240);
+      return `${freqMhz.toFixed(1)} MHz`;
+    }
+    // Fallback: just show EARFCN
+    return `EARFCN ${earfcn}`;
+  };
+
   const isEnodebConnected = (serial: string): boolean => {
     return enodebStatus?.s1ap.enodebs.some(e => e.serial_number === serial) ?? false;
   };
@@ -307,30 +319,9 @@ export const Dashboard: React.FC = () => {
                       </p>
                       {/* S1AP Connection Details */}
                       {isConnected && enb.ip_address && (
-                        <div className="flex items-center gap-4 mt-2 text-xs font-body text-gray-dark">
-                          <span className="flex items-center gap-1">
-                            <span className="text-gray-medium">IP:</span>
-                            <span className="font-mono">{enb.ip_address}:{enb.port || 36412}</span>
-                          </span>
-                          {enodebStatus?.network && (
-                            <>
-                              <span className="flex items-center gap-1">
-                                <span className="text-gray-medium">PLMN:</span>
-                                <span className="font-mono">{enodebStatus.network.mcc}/{enodebStatus.network.mnc}</span>
-                              </span>
-                              <span className="flex items-center gap-1">
-                                <span className="text-gray-medium">TAC:</span>
-                                <span className="font-mono">{enodebStatus.network.tac}</span>
-                              </span>
-                            </>
-                          )}
-                          {enb.sctp_streams && (
-                            <span className="flex items-center gap-1">
-                              <span className="text-gray-medium">SCTP Streams:</span>
-                              <span>{enb.sctp_streams}</span>
-                            </span>
-                          )}
-                        </div>
+                        <p className="text-xs text-gray-medium font-body mt-1">
+                          S1AP: <span className="font-mono text-gray-dark">{enb.ip_address}:{enb.port || 36412}</span>
+                        </p>
                       )}
                       {/* SNMP Monitoring Data */}
                       {(() => {
@@ -341,7 +332,17 @@ export const Dashboard: React.FC = () => {
                               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs font-body">
                                 {/* Cell Info */}
                                 <div>
-                                  <p className="text-gray-medium mb-1">Cell Status</p>
+                                  <p className="text-gray-medium mb-1">Cell</p>
+                                  <p className="text-gray-dark font-semibold">
+                                    {earfcnToFrequency(snmpData.cell.earfcn, snmpData.cell.band_class)}
+                                  </p>
+                                  <p className="text-gray-medium">
+                                    Band {snmpData.cell.band_class} | {snmpData.cell.bandwidth} | PCI {snmpData.cell.pci}
+                                  </p>
+                                </div>
+                                {/* Network Identity */}
+                                <div>
+                                  <p className="text-gray-medium mb-1">Network</p>
                                   <div className="flex items-center gap-2">
                                     <Badge variant={snmpData.connection.rf_enabled ? 'success' : 'error'}>
                                       RF {snmpData.connection.rf_enabled ? 'ON' : 'OFF'}
@@ -350,63 +351,45 @@ export const Dashboard: React.FC = () => {
                                       S1 {snmpData.connection.s1_link_up ? 'UP' : 'DOWN'}
                                     </Badge>
                                   </div>
-                                  {snmpData.cell.bandwidth && (
-                                    <p className="text-gray-dark mt-1">
-                                      Band {snmpData.cell.band_class} | {snmpData.cell.bandwidth}
-                                    </p>
-                                  )}
+                                  <p className="text-gray-medium mt-1">
+                                    TAC {snmpData.cell.tac} | Cell ID {snmpData.cell.cell_id}
+                                  </p>
                                 </div>
-                                {/* UE Count & Throughput */}
+                                {/* Traffic */}
                                 <div>
                                   <p className="text-gray-medium mb-1">Traffic</p>
-                                  <p className="text-gray-dark flex items-center gap-1">
+                                  <p className="text-gray-dark flex items-center gap-1 font-semibold">
                                     <Users className="w-3 h-3" />
-                                    {snmpData.connection.ue_count} UE(s)
+                                    {snmpData.connection.ue_count} UE
                                   </p>
-                                  <p className="text-gray-dark">
-                                    ↓ {formatThroughput(snmpData.performance.dl_throughput_kbps)} |
-                                    ↑ {formatThroughput(snmpData.performance.ul_throughput_kbps)}
+                                  <p className="text-gray-medium">
+                                    ↓{formatThroughput(snmpData.performance.dl_throughput_kbps)} ↑{formatThroughput(snmpData.performance.ul_throughput_kbps)}
                                   </p>
                                 </div>
-                                {/* TX Power */}
-                                <div>
-                                  <p className="text-gray-medium mb-1">TX Power</p>
-                                  <p className="text-gray-dark flex items-center gap-1">
-                                    <Signal className="w-3 h-3" />
-                                    {snmpData.tx_power.current_dbm ?? 'N/A'} dBm
-                                  </p>
-                                  {snmpData.tx_power.max_dbm && (
-                                    <p className="text-gray-medium">
-                                      Max: {snmpData.tx_power.max_dbm} dBm
-                                    </p>
-                                  )}
-                                </div>
-                                {/* Alarms */}
+                                {/* Health */}
                                 <div>
                                   <p className="text-gray-medium mb-1">Health</p>
                                   <div className="flex items-center gap-2">
                                     {snmpData.alarms.count === 0 ? (
-                                      <Badge variant="success">No Alarms</Badge>
+                                      <Badge variant="success">OK</Badge>
                                     ) : (
                                       <Badge variant="error">
                                         <AlertTriangle className="w-3 h-3 mr-1" />
-                                        {snmpData.alarms.count} Alarm(s)
+                                        {snmpData.alarms.count}
                                       </Badge>
                                     )}
+                                    <span className="text-gray-dark">
+                                      <Signal className="w-3 h-3 inline" /> {snmpData.tx_power.current_dbm ?? snmpData.tx_power.max_dbm ?? 'N/A'} dBm
+                                    </span>
                                   </div>
-                                  {snmpData.performance.cpu_utilization !== undefined && (
-                                    <p className="text-gray-dark flex items-center gap-1 mt-1">
-                                      <Cpu className="w-3 h-3" />
-                                      CPU: {snmpData.performance.cpu_utilization}%
-                                    </p>
-                                  )}
+                                  <p className="text-gray-medium mt-1">
+                                    <Cpu className="w-3 h-3 inline" /> {snmpData.performance.cpu_utilization ?? 0}%
+                                  </p>
                                 </div>
                               </div>
                               {/* Device Info Row */}
                               <div className="mt-2 pt-2 border-t border-gray-100 text-xs text-gray-medium">
-                                {snmpData.identity.product_type} |
-                                HW: {snmpData.identity.hardware_version} |
-                                SW: {snmpData.identity.software_version}
+                                {snmpData.identity.product_type} | {snmpData.identity.software_version}
                               </div>
                             </div>
                           );
