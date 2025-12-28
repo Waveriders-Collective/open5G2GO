@@ -93,16 +93,25 @@ export const Dashboard: React.FC = () => {
 
     const merged = new Map<string, ENodeBStatus>();
 
-    // Add S1AP connected eNodeBs
+    // Add S1AP connected eNodeBs first (has ip_address, port, sctp_streams)
     enodebStatus.s1ap.enodebs.forEach(enb => {
       merged.set(enb.serial_number, { ...enb });
     });
 
-    // Merge/add SAS eNodeBs
+    // Merge SAS data, preserving S1AP connection details
     enodebStatus.sas.enodebs.forEach(enb => {
       const existing = merged.get(enb.serial_number);
       if (existing) {
-        merged.set(enb.serial_number, { ...existing, ...enb });
+        // Keep S1AP connection data, add SAS registration data
+        merged.set(enb.serial_number, {
+          ...existing,
+          // Only override with SAS data if it has meaningful values
+          sas_state: enb.sas_state || existing.sas_state,
+          active_grant: enb.active_grant ?? existing.active_grant,
+          grants: enb.grants?.length ? enb.grants : existing.grants,
+          // Keep fcc_id from either source
+          fcc_id: enb.fcc_id || existing.fcc_id,
+        });
       } else {
         merged.set(enb.serial_number, { ...enb });
       }
