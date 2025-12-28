@@ -36,9 +36,18 @@ DEFAULT_AMBR_UL = 50000000   # 50 Mbps
 DEFAULT_AMBR_DL = 100000000  # 100 Mbps
 
 # Default Authentication Keys
-# These match the Waveriders SIM template for homelab testing
-DEFAULT_K = "465B5CE8B199B49FAA5F0A2EE238A6BC"
-DEFAULT_OPC = "E8ED289DEBA952E4283B54E88E6183CA"
+# ============================================================================
+# WARNING: THESE ARE DEMO KEYS FOR HOMELAB TESTING ONLY!
+# ============================================================================
+# These keys match the Waveriders SIM template for development/testing.
+# NEVER use these keys in production or public deployments.
+#
+# For production deployments, override with environment variables:
+#   OPEN5GS_DEFAULT_K  - 32-character hex authentication key
+#   OPEN5GS_DEFAULT_OPC - 32-character hex operator key
+# ============================================================================
+DEFAULT_K = os.getenv("OPEN5GS_DEFAULT_K", "465B5CE8B199B49FAA5F0A2EE238A6BC")
+DEFAULT_OPC = os.getenv("OPEN5GS_DEFAULT_OPC", "E8ED289DEBA952E4283B54E88E6183CA")
 
 # Open5GS Paths
 OPEN5GS_CONFIG_PATH = os.getenv("OPEN5GS_CONFIG_PATH", "/etc/open5gs")

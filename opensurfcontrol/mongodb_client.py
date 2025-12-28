@@ -241,6 +241,15 @@ class Open5GSClient:
 
         # Add static IP if provided
         if ip:
+            # Check for duplicate IP address
+            existing_with_ip = self.subscribers.find_one({
+                "slice.session.ue.addr": ip,
+                "imsi": {"$ne": imsi}  # Exclude current subscriber (for updates)
+            })
+            if existing_with_ip:
+                raise SubscriberError(
+                    f"IP address {ip} is already assigned to IMSI {existing_with_ip['imsi']}"
+                )
             session_config["ue"] = {"addr": ip}
 
         subscriber = {
@@ -420,6 +429,13 @@ class Open5GSClient:
 
 
 # Thread-safe singleton implementation
+# ============================================================================
+# NOTE: The singleton client is thread-safe for creation but individual
+# operations (list, get, add, update, delete) are not wrapped in locks.
+# In single-threaded async environments (typical MCP usage), this is fine.
+# For multi-threaded usage, consider using connection pooling or per-thread
+# client instances instead.
+# ============================================================================
 _client_instance: Optional[Open5GSClient] = None
 _client_lock = threading.Lock()
 
@@ -428,7 +444,15 @@ def get_client() -> Open5GSClient:
     """
     Get or create the singleton Open5GS client instance.
 
-    Thread-safe implementation using double-checked locking.
+    Thread-safe creation using double-checked locking. The client
+    maintains a persistent connection to MongoDB.
+
+    Returns:
+        Open5GSClient: The singleton client instance.
+
+    Note:
+        Individual database operations are not thread-safe. For
+        multi-threaded usage, consider per-thread client instances.
     """
     global _client_instance
     if _client_instance is None:

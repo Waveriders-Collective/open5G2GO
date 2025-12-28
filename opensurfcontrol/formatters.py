@@ -1,8 +1,10 @@
 """
-Response formatters for Attocore MCP server.
+Response formatters for OpenSurfControl MCP server.
 
 Functions to format tool responses in JSON and Markdown formats,
 following MCP best practices for human-readable vs machine-readable output.
+
+Part of Open5G2GO - Homelab toolkit for private 4G cellular networks.
 """
 
 import json
@@ -57,13 +59,13 @@ def format_subscriber_list_markdown(
 
     Args:
         subscribers: List of subscriber dictionaries
-        host: Attocore host IP
+        host: System identifier (e.g., "Open5GS")
 
     Returns:
         Markdown formatted string
     """
     lines = [
-        "# Attocore Subscriber List",
+        "# Open5GS Subscriber List",
         f"**Host:** {host}",
         f"**Timestamp:** {format_timestamp()}",
         f"**Total Subscribers:** {len(subscribers)}",
@@ -106,7 +108,7 @@ def format_subscriber_list_json(
 
     Args:
         subscribers: List of subscriber dictionaries
-        host: Attocore host IP
+        host: System identifier (e.g., "Open5GS")
 
     Returns:
         JSON formatted string
@@ -136,14 +138,14 @@ def format_system_status_markdown(
         provisioned: Total provisioned subscribers
         registered: Currently registered UEs
         connected: Currently connected UEs
-        gnbs: List of connected gNodeBs
-        host: Attocore host IP
+        gnbs: List of connected eNodeBs/gNodeBs
+        host: System identifier (e.g., "Open5GS")
 
     Returns:
         Markdown formatted string
     """
     lines = [
-        "# Attocore System Status",
+        "# Open5GS System Status",
         f"**Host:** {host}",
         f"**Timestamp:** {format_timestamp()}",
         "",
@@ -154,51 +156,48 @@ def format_system_status_markdown(
         ""
     ]
 
-    # gNodeB status
-    lines.append("## Connected gNodeBs")
+    # eNodeB/gNodeB status
+    lines.append("## Connected Base Stations")
     if gnbs:
-        lines.append(f"*{len(gnbs)} gNodeB(s) connected*")
+        lines.append(f"*{len(gnbs)} base station(s) connected*")
         lines.append("")
 
         for gnb in gnbs:
-            lines.append(f"### ✓ {gnb['name']}")
+            lines.append(f"### {gnb['name']}")
             lines.append(f"- **ID:** {gnb['id']}")
             lines.append(f"- **IP Address:** {gnb['ip']}")
             lines.append("")
     else:
-        lines.append("*⚠ No gNodeBs connected*")
+        lines.append("*No base stations detected (requires log parsing)*")
         lines.append("")
 
     # Health assessment
     lines.append("## System Health")
-    if gnbs:
-        lines.append("- **Core Status:** ✓ Operational")
-    else:
-        lines.append("- **Core Status:** ⚠ No gNodeBs connected")
+    lines.append("- **Core Status:** Operational (MongoDB connected)")
 
     if connected > 0:
-        lines.append(f"- **Active UEs:** ✓ {connected} device(s) connected")
+        lines.append(f"- **Active UEs:** {connected} device(s) connected")
     elif registered > 0:
-        lines.append(f"- **Active UEs:** ⚠ {registered} registered but not connected")
+        lines.append(f"- **Active UEs:** {registered} registered but not connected")
     else:
-        lines.append("- **Active UEs:** ○ No active connections")
+        lines.append("- **Active UEs:** Connection tracking requires log parsing")
 
     return "\n".join(lines)
 
 
 def _determine_operational_status(gnb_count: int, connected_count: int) -> str:
     """
-    Determine the operational status based on gNodeB and connection state.
-    
+    Determine the operational status based on base station and connection state.
+
     Returns:
         str: One of 'fully_operational', 'core_and_network_ready', 'core_ready'
     """
     if gnb_count == 0:
-        return "core_ready"              # 5G Core Ready (to connect gNBs)
+        return "core_ready"              # LTE Core Ready (awaiting base station detection)
     elif connected_count > 0:
         return "fully_operational"       # Fully Operational (subscribers connected)
     else:
-        return "core_and_network_ready"  # 5G Core and Network Ready (gNBs connected, ready for subscribers)
+        return "core_and_network_ready"  # Core and Network Ready (base stations connected)
 
 
 def format_system_status_json(
@@ -215,8 +214,8 @@ def format_system_status_json(
         provisioned: Total provisioned subscribers
         registered: Currently registered UEs
         connected: Currently connected UEs
-        gnbs: List of connected gNodeBs
-        host: Attocore host IP
+        gnbs: List of connected eNodeBs/gNodeBs
+        host: System identifier (e.g., "Open5GS")
 
     Returns:
         JSON formatted string
@@ -253,13 +252,13 @@ def format_active_connections_markdown(
 
     Args:
         connections: List of active connection dictionaries
-        host: Attocore host IP
+        host: System identifier (e.g., "Open5GS")
 
     Returns:
         Markdown formatted string
     """
     lines = [
-        "# Attocore Active Connections",
+        "# Open5GS Active Connections",
         f"**Host:** {host}",
         f"**Timestamp:** {format_timestamp()}",
         f"**Total Active:** {len(connections)} device(s)",
@@ -297,7 +296,7 @@ def format_active_connections_json(
 
     Args:
         connections: List of active connection dictionaries
-        host: Attocore host IP
+        host: System identifier (e.g., "Open5GS")
 
     Returns:
         JSON formatted string
@@ -324,11 +323,11 @@ def format_network_config_markdown(
     Format network configuration as Markdown.
 
     Args:
-        plmnid: PLMN ID (e.g., "999773")
+        plmnid: PLMN ID (e.g., "315010")
         tac: Tracking Area Code
         network_name: Network name
-        dnns: List of DNN configurations
-        host: Attocore host IP
+        dnns: List of DNN/APN configurations
+        host: System identifier (e.g., "Open5GS")
 
     Returns:
         Markdown formatted string
@@ -337,7 +336,7 @@ def format_network_config_markdown(
     mnc = plmnid[3:]
 
     lines = [
-        "# Attocore Network Configuration",
+        "# Open5GS Network Configuration",
         f"**Host:** {host}",
         f"**Timestamp:** {format_timestamp()}",
         "",
@@ -375,11 +374,11 @@ def format_network_config_json(
     Format network configuration as JSON.
 
     Args:
-        plmnid: PLMN ID
+        plmnid: PLMN ID (e.g., "315010")
         tac: Tracking Area Code
         network_name: Network name
-        dnns: List of DNN configurations
-        host: Attocore host IP
+        dnns: List of DNN/APN configurations
+        host: System identifier (e.g., "Open5GS")
 
     Returns:
         JSON formatted string
