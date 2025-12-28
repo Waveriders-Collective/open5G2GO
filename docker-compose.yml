@@ -17,7 +17,7 @@ services:
   # Database
   # =============================================================================
   mongodb:
-    image: mongo:6.0
+    image: mongo:4.4  # 4.4 supports CPUs without AVX (5.0+ requires AVX)
     container_name: open5g2go-mongodb
     restart: unless-stopped
     environment:
@@ -28,7 +28,7 @@ services:
       open5g2go:
         ipv4_address: 172.26.0.2
     healthcheck:
-      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      test: ["CMD", "mongo", "--eval", "db.adminCommand('ping')"]
       interval: 10s
       timeout: 5s
       retries: 5
