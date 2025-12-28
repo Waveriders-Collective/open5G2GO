@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Users, Activity, Radio, Server, RefreshCw, ChevronDown, ChevronUp } from 'lucide-react';
 import { StatCard, Card, Badge, Table, LoadingSpinner } from '../components/ui';
 import { api } from '../services/api';
-import type { SystemStatusResponse, ActiveConnectionsResponse, EnodebStatusResponse, ENodeBStatus, GrantInfo } from '../types/open5gs';
+import type { SystemStatusResponse, ActiveConnectionsResponse, EnodebStatusResponse, ENodeBStatus } from '../types/open5gs';
 
 export const Dashboard: React.FC = () => {
   const [status, setStatus] = useState<SystemStatusResponse | null>(null);
