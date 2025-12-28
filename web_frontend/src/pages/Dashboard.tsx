@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Users, Activity, Radio, Server, RefreshCw, ChevronDown, ChevronUp, Wifi, WifiOff, AlertTriangle, Cpu, Signal } from 'lucide-react';
+import { Users, Activity, Radio, Server, RefreshCw, ChevronDown, ChevronUp, Wifi, WifiOff, AlertTriangle, Cpu } from 'lucide-react';
 import { StatCard, Card, Badge, Table, LoadingSpinner } from '../components/ui';
 import { api } from '../services/api';
 import type { SystemStatusResponse, ActiveConnectionsResponse, EnodebStatusResponse, ENodeBStatus, SNMPEnodebStatus } from '../types/open5gs';
@@ -330,60 +330,68 @@ export const Dashboard: React.FC = () => {
                           return (
                             <div className="mt-3 p-3 bg-white rounded border border-gray-100">
                               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs font-body">
-                                {/* Cell Info */}
+                                {/* Cell - RF/Radio layer */}
                                 <div>
                                   <p className="text-gray-medium mb-1">Cell</p>
-                                  <p className="text-gray-dark font-semibold">
-                                    {earfcnToFrequency(snmpData.cell.earfcn, snmpData.cell.band_class)}
-                                  </p>
-                                  <p className="text-gray-medium">
-                                    Band {snmpData.cell.band_class} | {snmpData.cell.bandwidth} | PCI {snmpData.cell.pci}
-                                  </p>
-                                </div>
-                                {/* Network Identity */}
-                                <div>
-                                  <p className="text-gray-medium mb-1">Network</p>
-                                  <div className="flex items-center gap-2">
+                                  <div className="flex items-center gap-2 mb-1">
                                     <Badge variant={snmpData.connection.rf_enabled ? 'success' : 'error'}>
                                       RF {snmpData.connection.rf_enabled ? 'ON' : 'OFF'}
                                     </Badge>
+                                  </div>
+                                  <p className="text-gray-dark font-semibold">
+                                    B{snmpData.cell.band_class} | {earfcnToFrequency(snmpData.cell.earfcn, snmpData.cell.band_class)}
+                                  </p>
+                                  <p className="text-gray-medium">
+                                    {snmpData.cell.bandwidth} | {snmpData.tx_power.current_dbm ?? snmpData.tx_power.max_dbm ?? 'N/A'} dBm
+                                  </p>
+                                </div>
+                                {/* Core - S1AP backhaul */}
+                                <div>
+                                  <p className="text-gray-medium mb-1">Core</p>
+                                  <div className="flex items-center gap-2 mb-1">
                                     <Badge variant={snmpData.connection.s1_link_up ? 'success' : 'error'}>
-                                      S1 {snmpData.connection.s1_link_up ? 'UP' : 'DOWN'}
+                                      S1AP {snmpData.connection.s1_link_up ? 'UP' : 'DOWN'}
                                     </Badge>
                                   </div>
-                                  <p className="text-gray-medium mt-1">
-                                    TAC {snmpData.cell.tac} | Cell ID {snmpData.cell.cell_id}
+                                  <p className="text-gray-dark">
+                                    TAC {snmpData.cell.tac} | Cell {snmpData.cell.cell_id}
+                                  </p>
+                                  <p className="text-gray-medium">
+                                    PCI {snmpData.cell.pci}
                                   </p>
                                 </div>
                                 {/* Traffic */}
                                 <div>
                                   <p className="text-gray-medium mb-1">Traffic</p>
-                                  <p className="text-gray-dark flex items-center gap-1 font-semibold">
+                                  <p className="text-gray-dark font-semibold flex items-center gap-1">
                                     <Users className="w-3 h-3" />
                                     {snmpData.connection.ue_count} UE
                                   </p>
                                   <p className="text-gray-medium">
                                     ↓{formatThroughput(snmpData.performance.dl_throughput_kbps)} ↑{formatThroughput(snmpData.performance.ul_throughput_kbps)}
                                   </p>
+                                  <p className="text-gray-medium">
+                                    PRB: ↓{snmpData.performance.dl_prb_pct ?? 0}% ↑{snmpData.performance.ul_prb_pct ?? 0}%
+                                  </p>
                                 </div>
                                 {/* Health */}
                                 <div>
                                   <p className="text-gray-medium mb-1">Health</p>
-                                  <div className="flex items-center gap-2">
+                                  <div className="flex items-center gap-2 mb-1">
                                     {snmpData.alarms.count === 0 ? (
                                       <Badge variant="success">OK</Badge>
                                     ) : (
                                       <Badge variant="error">
                                         <AlertTriangle className="w-3 h-3 mr-1" />
-                                        {snmpData.alarms.count}
+                                        {snmpData.alarms.count} Alarm{snmpData.alarms.count > 1 ? 's' : ''}
                                       </Badge>
                                     )}
-                                    <span className="text-gray-dark">
-                                      <Signal className="w-3 h-3 inline" /> {snmpData.tx_power.current_dbm ?? snmpData.tx_power.max_dbm ?? 'N/A'} dBm
-                                    </span>
                                   </div>
-                                  <p className="text-gray-medium mt-1">
-                                    <Cpu className="w-3 h-3 inline" /> {snmpData.performance.cpu_utilization ?? 0}%
+                                  <p className="text-gray-dark">
+                                    <Cpu className="w-3 h-3 inline" /> CPU {snmpData.performance.cpu_utilization ?? 0}%
+                                  </p>
+                                  <p className="text-gray-medium">
+                                    RRC {snmpData.kpis.rrc_success_pct ?? 'N/A'}% | E-RAB {snmpData.kpis.erab_success_pct ?? 'N/A'}%
                                   </p>
                                 </div>
                               </div>

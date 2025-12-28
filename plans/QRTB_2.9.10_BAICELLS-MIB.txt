@@ -1,0 +1,576 @@
+BAICELLS-MIB DEFINITIONS ::= BEGIN
+
+IMPORTS
+	OBJECT-GROUP, NOTIFICATION-GROUP			FROM SNMPv2-CONF			
+	enterprises, Integer32, IpAddress, 
+	OBJECT-TYPE, MODULE-IDENTITY, 
+	OBJECT-IDENTITY, Unsigned32,
+	NOTIFICATION-TYPE							FROM SNMPv2-SMI			
+	TEXTUAL-CONVENTION,DisplayString, 
+	RowStatus									FROM SNMPv2-TC;
+
+baicellsMib MODULE-IDENTITY
+	LAST-UPDATED	"201811121926Z"
+	ORGANIZATION	"Baicells"
+	CONTACT-INFO	"maiopei@baicells.com"
+	DESCRIPTION		""
+	REVISION		"201811121926Z"
+	::= { enterprises 53058 }
+
+--
+-- Basic Setting
+--
+basicSetting OBJECT IDENTIFIER ::= { baicellsMib 100 }
+
+productType OBJECT-TYPE
+    SYNTAX		DisplayString
+    MAX-ACCESS	read-only
+    STATUS		current
+    DESCRIPTION ""
+    ::= { basicSetting 1 }
+
+hardwareVersion OBJECT-TYPE
+    SYNTAX		DisplayString
+    MAX-ACCESS	read-only
+    STATUS		current
+    DESCRIPTION ""
+    ::= { basicSetting 2 }
+
+softwareVersion OBJECT-TYPE
+    SYNTAX		DisplayString
+    MAX-ACCESS	read-only
+    STATUS		current
+    DESCRIPTION ""
+    ::= { basicSetting 3 }
+
+sn OBJECT-TYPE
+    SYNTAX		DisplayString
+    MAX-ACCESS	read-only
+    STATUS		current
+    DESCRIPTION ""
+    ::= { basicSetting 4 }
+
+cellStatus OBJECT-TYPE
+    SYNTAX		DisplayString
+    MAX-ACCESS	read-only
+    STATUS		current
+    DESCRIPTION ""
+    ::= { basicSetting 5 }
+
+bandClass OBJECT-TYPE
+    SYNTAX		Integer32
+    MAX-ACCESS	read-only
+    STATUS		current
+    DESCRIPTION ""
+    ::= { basicSetting 6 }
+
+carrierBwMhz OBJECT-TYPE
+    SYNTAX		Integer32 {
+                    5MHz        (25),
+                    10MHz       (50),
+                    15MHz       (75),
+                    20MHz       (100)
+                }
+	MAX-ACCESS	read-write    
+    STATUS		current
+    DESCRIPTION "Get/Set carrierBwMhz:
+                25-[5MHz]
+                50-[10MHz]
+                75-[15MHz]
+                100-[20MHz]
+    "
+    ::= { basicSetting 7 }
+
+basicSettingEarfcnCell2 OBJECT IDENTIFIER ::= { basicSetting 8 }
+
+earfcn OBJECT-TYPE   
+	SYNTAX		Integer32 (SIZE (0..65535))
+	MAX-ACCESS	read-write    
+	STATUS		current       
+	DESCRIPTION ""  
+	::= { basicSettingEarfcnCell2 1 }           
+
+earfcnCell2 OBJECT-TYPE   
+	SYNTAX		Integer32 (SIZE (0..65535))
+	MAX-ACCESS	read-write    
+	STATUS		current       
+	DESCRIPTION ""  
+	::= { basicSettingEarfcnCell2 2 }  
+
+basicSettingUecountCell2 OBJECT IDENTIFIER ::= { basicSetting 11 }
+	
+ueConnections OBJECT-TYPE   
+	SYNTAX		Integer32
+	MAX-ACCESS	read-only
+	STATUS		current       
+	DESCRIPTION ""  
+	::= { basicSettingUecountCell2 1 }
+	
+ueConnectionsCell2 OBJECT-TYPE   
+	SYNTAX		Integer32
+	MAX-ACCESS	read-only
+	STATUS		current       
+	DESCRIPTION ""  
+	::= { basicSettingUecountCell2 2 }	
+
+basicSettingPciCell2 OBJECT IDENTIFIER ::= { basicSetting 12 }
+
+pci OBJECT-TYPE   
+	SYNTAX		Integer32 (SIZE (0..503))
+	MAX-ACCESS	read-write    
+	STATUS		current       
+	DESCRIPTION ""  
+	::= { basicSettingPciCell2 1 } 
+
+pciCell2 OBJECT-TYPE   
+	SYNTAX		Integer32 (SIZE (0..503))
+	MAX-ACCESS	read-write    
+	STATUS		current       
+	DESCRIPTION ""  
+	::= { basicSettingPciCell2 2 } 
+
+basicSettingCellIdCell2 OBJECT IDENTIFIER ::= { basicSetting 13 }
+
+cellID OBJECT-TYPE   
+	SYNTAX		Integer32 (SIZE (0..268435455))
+	MAX-ACCESS	read-write    
+	STATUS		current       
+	DESCRIPTION ""  
+	::= { basicSettingCellIdCell2 1 } 
+
+cellID2 OBJECT-TYPE   
+	SYNTAX		Integer32 (SIZE (0..268435455))
+	MAX-ACCESS	read-write    
+	STATUS		current       
+	DESCRIPTION ""  
+	::= { basicSettingCellIdCell2 2 } 
+
+tac OBJECT-TYPE   
+	SYNTAX		Integer32 (SIZE (0..65535))
+	MAX-ACCESS	read-write    
+	STATUS		current       
+	DESCRIPTION ""  
+	::= { basicSetting 15 } 
+
+subFrameAssignment OBJECT-TYPE   
+	SYNTAX		Integer32 (SIZE (0..6))
+	MAX-ACCESS	read-write    
+	STATUS		current       
+	DESCRIPTION ""  
+	::= { basicSetting 16 } 
+
+specialSubframePatterns OBJECT-TYPE   
+	SYNTAX		Integer32 (SIZE (0..8))
+	MAX-ACCESS	read-write    
+	STATUS		current       
+	DESCRIPTION ""  
+	::= { basicSetting 17 } 
+
+s1LinkStatus OBJECT-TYPE   
+	SYNTAX		Integer32 {
+					LinkDown	(0),
+					LinkUp      (1)
+				} 
+	MAX-ACCESS	read-only    
+	STATUS		current       
+	DESCRIPTION ""  
+	::= { basicSetting 21 } 
+
+
+--
+-- System
+--
+system OBJECT IDENTIFIER ::= { baicellsMib 110 }
+
+ntpServer1 OBJECT-TYPE   
+	SYNTAX		DisplayString (SIZE (0..255)) 
+	MAX-ACCESS	read-write    
+	STATUS		current       
+	DESCRIPTION	""  
+	::= { system 1 } 
+
+ntpServer2 OBJECT-TYPE   
+	SYNTAX		DisplayString (SIZE (0..255)) 
+	MAX-ACCESS	read-write    
+	STATUS		current       
+	DESCRIPTION	""  
+	::= { system 2 } 
+
+ntpServer3 OBJECT-TYPE   
+	SYNTAX		DisplayString (SIZE (0..255))
+	MAX-ACCESS	read-write    
+	STATUS		current       
+	DESCRIPTION	""  
+	::= { system 3 } 
+
+--
+-- Network
+--
+network OBJECT IDENTIFIER ::= { baicellsMib 120 }
+
+macAddress OBJECT-TYPE   
+	SYNTAX		DisplayString (SIZE (0..255)) 
+	MAX-ACCESS	read-only    
+	STATUS		current       
+	DESCRIPTION	""  
+	::= { network 1 } 
+
+timeZone OBJECT-TYPE   
+	SYNTAX		DisplayString (SIZE (0..255)) 
+	MAX-ACCESS	read-write    
+	STATUS		current       
+	DESCRIPTION	""  
+	::= { network 2 }	
+	
+linkSpeed OBJECT-TYPE   
+	SYNTAX		DisplayString (SIZE (0..255)) 
+	MAX-ACCESS	read-only    
+	STATUS		current       
+	DESCRIPTION	""  
+	::= { network 3 }	
+
+--
+-- LTE Setting
+--
+lteSetting OBJECT IDENTIFIER ::= { baicellsMib 140 }
+
+--
+-- LTE Setting: Advanced Parameter
+--
+lteSettingAdvanced OBJECT IDENTIFIER ::= { lteSetting 100 }
+
+lteA1RSRPThreshold OBJECT-TYPE
+	SYNTAX		Integer32 (SIZE (0..97))
+	MAX-ACCESS	read-write
+	STATUS		current
+	DESCRIPTION ""
+	::= { lteSettingAdvanced 1 }
+
+lteA2RSRPThreshold OBJECT-TYPE
+	SYNTAX		Integer32 (SIZE (0..97))
+	MAX-ACCESS	read-write
+	STATUS		current
+	DESCRIPTION ""
+	::= { lteSettingAdvanced 2 }
+
+lteA3Offset OBJECT-TYPE
+	SYNTAX		Integer32 (SIZE (-30..30))
+	MAX-ACCESS	read-write
+	STATUS		current
+	DESCRIPTION ""
+	::= { lteSettingAdvanced 3 }
+
+interFreqA5RSRPThreshold1 OBJECT-TYPE
+	SYNTAX		Integer32 (SIZE (0..97))
+	MAX-ACCESS	read-write
+	STATUS		current
+	DESCRIPTION ""
+	::= { lteSettingAdvanced 4 }
+
+interFreqA5RSRPThreshold2 OBJECT-TYPE
+	SYNTAX		Integer32 (SIZE (0..97))
+	MAX-ACCESS	read-write
+	STATUS		current
+	DESCRIPTION ""
+	::= { lteSettingAdvanced 5 }
+
+lteTotalTxPower OBJECT-TYPE
+	SYNTAX		Integer32
+	MAX-ACCESS	read-write
+	STATUS		current
+	DESCRIPTION ""
+	::= { lteSettingAdvanced 6 }
+
+lteENodebName OBJECT-TYPE
+	SYNTAX		DisplayString
+	MAX-ACCESS	read-only
+	STATUS		current
+	DESCRIPTION ""
+	::= { lteSettingAdvanced 7 }
+
+lteRootSequenceIndex OBJECT-TYPE
+	SYNTAX		Integer32 (SIZE (0..837))
+	MAX-ACCESS	read-write
+	STATUS		current
+	DESCRIPTION ""
+	::= { lteSettingAdvanced 8 }
+
+lteMinTxPower OBJECT-TYPE
+	SYNTAX		Integer32
+	MAX-ACCESS	read-only
+	STATUS		current
+	DESCRIPTION	""
+	::= { lteSettingAdvanced 9 }
+
+lteMaxTxPower OBJECT-TYPE
+	SYNTAX		Integer32
+	MAX-ACCESS	read-only
+	STATUS		current
+	DESCRIPTION	""
+	::= { lteSettingAdvanced 10 }
+
+intraFreqANRA3Offset OBJECT-TYPE
+	SYNTAX		Integer32 (SIZE (-30..30))
+	MAX-ACCESS	read-write
+	STATUS		current
+	DESCRIPTION	""
+	::= { lteSettingAdvanced 11 }
+
+interFreqANRA5RSRPThreshold1 OBJECT-TYPE
+	SYNTAX		Integer32 (SIZE (0..97))
+	MAX-ACCESS	read-write
+	STATUS		current
+	DESCRIPTION	""
+	::= { lteSettingAdvanced 12 }
+
+interFreqANRA5RSRPThreshold2 OBJECT-TYPE
+	SYNTAX		Integer32 (SIZE (0..97))
+	MAX-ACCESS	read-write
+	STATUS		current
+	DESCRIPTION	""
+	::= { lteSettingAdvanced 13 }
+
+--
+-- OS
+--
+os OBJECT IDENTIFIER ::= { baicellsMib 150 }
+
+cpu0Utilization OBJECT-TYPE   
+	SYNTAX		Integer32 
+	MAX-ACCESS	read-only    
+	STATUS		current       
+	DESCRIPTION	""  
+	::= { os 1 }
+
+cpu1Utilization OBJECT-TYPE   
+	SYNTAX		Integer32 
+	MAX-ACCESS	read-only    
+	STATUS		current       
+	DESCRIPTION	""  
+	::= { os 2 }
+
+--
+-- Alarm
+--
+alarm OBJECT IDENTIFIER ::= { baicellsMib 160 }
+
+numberOfAlarm OBJECT-TYPE
+	SYNTAX		Integer32
+	MAX-ACCESS	read-only    
+	STATUS		current     
+	DESCRIPTION	""  
+	::= { alarm 1 }
+
+currentAlarmList OBJECT IDENTIFIER ::= { alarm 2 }
+
+lteRrcSctpAssociationFailure OBJECT-TYPE
+	SYNTAX		Integer32 {
+					clear	(0), -- xxx
+					problem	(1)  -- xxx 
+				}
+	MAX-ACCESS	read-only    
+	STATUS		current     
+	DESCRIPTION	"0-[Clear], 1-[Problem]"  
+	::= { currentAlarmList 11112 }
+
+cellUnavailable OBJECT-TYPE
+	SYNTAX		Integer32 {
+					clear	(0), -- xxx
+					problem	(1)  -- xxx 
+				}
+	MAX-ACCESS	read-only    
+	STATUS		current     
+	DESCRIPTION	"0-[Clear], 1-[Problem]"  
+	::= { currentAlarmList 11184 }
+
+
+
+--
+-- Performance
+--
+performance OBJECT IDENTIFIER ::= { baicellsMib 190 }
+
+eRABEstablishSuccessRate OBJECT-TYPE   
+	SYNTAX		Integer32
+	MAX-ACCESS	read-only    
+	STATUS		current       
+	DESCRIPTION	"unit of measurement: %"  
+	::= { performance 3 }
+
+hoSuccInterEnbS1Rate OBJECT-TYPE   
+	SYNTAX		Integer32 
+	MAX-ACCESS	read-only    
+	STATUS		current       
+	DESCRIPTION	"Unit of measurement: %"  
+	::= { performance 4 }
+
+hoSuccInterEnbRate OBJECT-TYPE   
+	SYNTAX		Integer32
+	MAX-ACCESS	read-only    
+	STATUS		current       
+	DESCRIPTION	"Unit of measurement: %"  
+	::= { performance 5 }
+
+rrcBuildSuccessRate OBJECT-TYPE   
+	SYNTAX		Integer32
+	MAX-ACCESS	read-only    
+	STATUS		current       
+	DESCRIPTION	"Unit of measurement: %"  
+	::= { performance 6 }
+
+ulThroughput OBJECT IDENTIFIER ::= { performance 7 }
+
+ulThroughputCell1 OBJECT-TYPE   
+	SYNTAX		Integer32 (SIZE (0..65535))
+	MAX-ACCESS	read-only    
+	STATUS		current       
+	DESCRIPTION "Unit of measurement: kbps"  
+	::= { ulThroughput 1 }           
+
+ulThroughputCell2 OBJECT-TYPE   
+	SYNTAX		Integer32 (SIZE (0..65535))
+	MAX-ACCESS	read-only    
+	STATUS		current       
+	DESCRIPTION "Unit of measurement: kbps"  
+	::= { ulThroughput 2 }  
+
+dlThroughput OBJECT IDENTIFIER ::= { performance 8 }
+
+dlThroughputCell1 OBJECT-TYPE   
+	SYNTAX		Integer32 (SIZE (0..65535))
+	MAX-ACCESS	read-only    
+	STATUS		current       
+	DESCRIPTION "Unit of measurement: kbps"  
+	::= { dlThroughput 1 }           
+
+dlThroughputCell2 OBJECT-TYPE   
+	SYNTAX		Integer32 (SIZE (0..65535))
+	MAX-ACCESS	read-only    
+	STATUS		current       
+	DESCRIPTION "Unit of measurement: kbps"  
+	::= { dlThroughput 2 }  
+	
+ulPrbUtilization OBJECT-TYPE ::= { performance 9 }
+
+ulPrbUtilizationCell1 OBJECT-TYPE   
+	SYNTAX		Integer32 (SIZE (0..65535))
+	MAX-ACCESS	read-only    
+	STATUS		current       
+	DESCRIPTION "Unit of measurement: %"  
+	::= { ulPrbUtilization 1 }           
+
+ulPrbUtilizationCell2 OBJECT-TYPE   
+	SYNTAX		Integer32 (SIZE (0..65535))
+	MAX-ACCESS	read-only    
+	STATUS		current       
+	DESCRIPTION "Unit of measurement: %"  
+	::= { ulPrbUtilization 2 }  
+
+dlPrbUtilization OBJECT-TYPE ::= { performance 10 }
+
+dlPrbUtilizationCell1 OBJECT-TYPE   
+	SYNTAX		Integer32 (SIZE (0..65535))
+	MAX-ACCESS	read-only    
+	STATUS		current       
+	DESCRIPTION "Unit of measurement: %"  
+	::= { dlPrbUtilization 1 }           
+
+dlPrbUtilizationCell2 OBJECT-TYPE   
+	SYNTAX		Integer32 (SIZE (0..65535))
+	MAX-ACCESS	read-only    
+	STATUS		current       
+	DESCRIPTION "Unit of measurement: %"  
+	::= { dlPrbUtilization 2 }  
+
+--
+-- Additional
+--
+additional OBJECT IDENTIFIER ::= { baicellsMib 260 }
+
+disableAutoReboot OBJECT-TYPE   
+	SYNTAX		Integer32 {
+					off		(0), -- watchdog off
+					on		(1)  -- watchdog on
+				}
+	MAX-ACCESS	read-write    
+	STATUS		current       
+	DESCRIPTION	"Get/Set Disable Auto Reboot:
+	            0-[watchDog OFF], 
+				1-[watchDog ON]"  
+	::= { additional 2 }
+	
+--
+-- Control
+--
+control OBJECT IDENTIFIER ::= { baicellsMib 270 }
+
+controlRfOff OBJECT IDENTIFIER ::= { control 1 }
+
+rfOff OBJECT-TYPE   
+	SYNTAX		Integer32 {
+					off		(0), -- rf off
+					on		(1)  -- rf on
+				}
+	MAX-ACCESS	read-write    
+	STATUS		current       
+	DESCRIPTION	"Get/Set RadioControl:
+				0-[RF OFF],
+				1-[RF ON]"  
+	::= { controlRfOff 1 }
+
+rfOffCell2 OBJECT-TYPE   
+	SYNTAX		Integer32 {
+					off		(0), -- rf off
+					on		(1)  -- rf on
+				}
+	MAX-ACCESS	read-write    
+	STATUS		current       
+	DESCRIPTION	"Get/Set RadioControl:
+				0-[RF OFF],
+				1-[RF ON]"  
+	::= { controlRfOff 2 }
+
+reboot OBJECT-TYPE   
+	SYNTAX		Integer32 {
+					reboot		(1) -- reboot system
+				}
+	MAX-ACCESS	read-write    
+	STATUS		current       
+	DESCRIPTION	"Set Reboot:
+				1-[reboot],
+				others-[do nothing]"  
+	::= { control 2 }
+
+
+--
+-- SNMP
+--
+snmpSetting OBJECT IDENTIFIER ::= { baicellsMib 290 }
+
+snmpTrapConfig OBJECT IDENTIFIER ::= { snmpSetting 2 }
+
+trapHost OBJECT-TYPE
+	SYNTAX		DisplayString
+	MAX-ACCESS	read-only 
+	STATUS		current    
+	DESCRIPTION	""  
+	::= { snmpTrapConfig 1 }
+
+
+--
+-- SON Function Setting
+--
+sonFunctionSetting OBJECT IDENTIFIER ::= { baicellsMib 330 }
+
+pciSelfconfig OBJECT-TYPE
+	SYNTAX		Integer32 {
+					Disable		(0),
+					Enable		(1)
+				}
+	MAX-ACCESS	read-write
+	STATUS		current       
+	DESCRIPTION	""  
+	::= { sonFunctionSetting 1 }
+
+END
+
