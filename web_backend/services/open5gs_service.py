@@ -10,6 +10,7 @@ from datetime import datetime, timezone
 from typing import Dict, Any, Optional, List
 
 from opensurfcontrol.mongodb_client import Open5GSClient, get_client
+from opensurfcontrol.mme_client import get_mme_parser
 from opensurfcontrol.constants import (
     IMSI_PREFIX,
     DEFAULT_APN,
@@ -278,7 +279,7 @@ class Open5GSService:
 
     async def get_system_status(self) -> Dict[str, Any]:
         """
-        Get system status.
+        Get system status including eNodeB connections from MME logs.
 
         Returns:
             System status information.
@@ -287,21 +288,28 @@ class Open5GSService:
             status = self.client.get_system_status()
             health_ok = self.client.health_check()
 
+            # Get eNodeB connection status from MME logs
+            mme_parser = get_mme_parser()
+            enodebs = mme_parser.get_connected_enodebs()
+            enb_count = len(enodebs)
+
             return {
                 "timestamp": self._timestamp(),
+                "system_name": "Open5G2GO",
                 "subscribers": {
                     "provisioned": status.get("total_subscribers", 0),
                     "registered": 0,  # Would need real-time tracking
                     "connected": 0    # Would need real-time tracking
                 },
                 "enodebs": {
-                    "total": 0,  # Would need S1AP monitoring
-                    "list": []
+                    "total": enb_count,
+                    "list": enodebs
                 },
                 "health": {
                     "core_operational": health_ok,
                     "database_connected": status.get("connection") == "connected",
-                    "has_active_connections": False  # Would need real-time tracking
+                    "has_active_connections": enb_count > 0,
+                    "enodebs_connected": enb_count > 0
                 }
             }
         except Exception as e:
