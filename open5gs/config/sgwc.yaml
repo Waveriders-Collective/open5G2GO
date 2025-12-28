@@ -1,0 +1,25 @@
+# Open5GS SGWC (Serving Gateway Control Plane) Configuration
+# Manages GTP-C signaling for the Serving Gateway
+
+logger:
+  file:
+    path: /var/log/open5gs/sgwc.log
+  level: info
+
+global:
+  max:
+    ue: 100
+
+sgwc:
+  # GTP-C interface (from MME and to SMF)
+  gtpc:
+    server:
+      - address: 172.26.0.12
+
+  # PFCP interface to SGWU
+  pfcp:
+    server:
+      - address: 172.26.0.12
+    client:
+      sgwu:
+        - address: 172.26.0.13

@@ -1,0 +1,267 @@
+# Open5G2GO Docker Compose Configuration
+# Single-stack deployment for private 4G LTE networks
+#
+# Services:
+#   - mongodb: Subscriber database
+#   - open5gs-*: 4G EPC core network functions
+#   - backend: FastAPI REST API
+#   - frontend: React SPA on port 8080
+#
+# IMPORTANT: Before deploying, ensure:
+#   1. SCTP kernel module is loaded: sudo modprobe sctp
+#   2. Docker host IP (10.48.0.110) is reachable from eNodeB
+#   3. Firewall allows ports 36412/sctp and 2152/udp
+
+services:
+  # =============================================================================
+  # Database
+  # =============================================================================
+  mongodb:
+    image: mongo:6.0
+    container_name: open5g2go-mongodb
+    restart: unless-stopped
+    environment:
+      - MONGO_INITDB_DATABASE=open5gs
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      open5g2go:
+        ipv4_address: 172.26.0.2
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # =============================================================================
+  # Open5GS 4G EPC Components
+  # =============================================================================
+
+  # HSS - Home Subscriber Server (authentication/subscription data)
+  hss:
+    build:
+      context: ./open5gs
+      dockerfile: Dockerfile
+    container_name: open5g2go-hss
+    restart: unless-stopped
+    command: open5gs-hssd
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    environment:
+      - DB_URI=mongodb://mongodb/open5gs
+    volumes:
+      - ./open5gs/config/hss.yaml:/etc/open5gs/hss.yaml:ro
+      - ./open5gs/config/freeDiameter:/etc/freeDiameter:ro
+      - open5gs_logs:/var/log/open5gs
+    networks:
+      open5g2go:
+        ipv4_address: 172.26.0.10
+    healthcheck:
+      test: ["CMD", "pgrep", "-f", "open5gs-hssd"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  # MME - Mobility Management Entity (control plane, S1AP interface)
+  # NOTE: If SCTP port mapping fails, use network_mode: host instead
+  # and update mme.yaml to bind to host IP (10.48.0.110)
+  mme:
+    build:
+      context: ./open5gs
+      dockerfile: Dockerfile
+    container_name: open5g2go-mme
+    restart: unless-stopped
+    command: open5gs-mmed
+    depends_on:
+      hss:
+        condition: service_healthy
+      sgwc:
+        condition: service_healthy
+      smf:
+        condition: service_healthy
+    volumes:
+      - ./open5gs/config/mme.yaml:/etc/open5gs/mme.yaml:ro
+      - ./open5gs/config/freeDiameter:/etc/freeDiameter:ro
+      - open5gs_logs:/var/log/open5gs
+    ports:
+      - "36412:36412/sctp"  # S1AP for eNodeB connection
+    networks:
+      open5g2go:
+        ipv4_address: 172.26.0.11
+    healthcheck:
+      test: ["CMD", "pgrep", "-f", "open5gs-mmed"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  # SGWC - Serving Gateway Control Plane
+  sgwc:
+    build:
+      context: ./open5gs
+      dockerfile: Dockerfile
+    container_name: open5g2go-sgwc
+    restart: unless-stopped
+    command: open5gs-sgwcd
+    depends_on:
+      sgwu:
+        condition: service_healthy
+    volumes:
+      - ./open5gs/config/sgwc.yaml:/etc/open5gs/sgwc.yaml:ro
+      - open5gs_logs:/var/log/open5gs
+    networks:
+      open5g2go:
+        ipv4_address: 172.26.0.12
+    healthcheck:
+      test: ["CMD", "pgrep", "-f", "open5gs-sgwcd"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  # SGWU - Serving Gateway User Plane
+  sgwu:
+    build:
+      context: ./open5gs
+      dockerfile: Dockerfile
+    container_name: open5g2go-sgwu
+    restart: unless-stopped
+    command: open5gs-sgwud
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun
+    volumes:
+      - ./open5gs/config/sgwu.yaml:/etc/open5gs/sgwu.yaml:ro
+      - open5gs_logs:/var/log/open5gs
+    ports:
+      - "2152:2152/udp"  # GTP-U for user data
+    networks:
+      open5g2go:
+        ipv4_address: 172.26.0.13
+    healthcheck:
+      test: ["CMD", "pgrep", "-f", "open5gs-sgwud"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  # SMF - Session Management Function (PGW-C in 4G terms)
+  smf:
+    build:
+      context: ./open5gs
+      dockerfile: Dockerfile
+    container_name: open5g2go-smf
+    restart: unless-stopped
+    command: open5gs-smfd
+    depends_on:
+      upf:
+        condition: service_healthy
+    volumes:
+      - ./open5gs/config/smf.yaml:/etc/open5gs/smf.yaml:ro
+      - ./open5gs/config/freeDiameter:/etc/freeDiameter:ro
+      - open5gs_logs:/var/log/open5gs
+    networks:
+      open5g2go:
+        ipv4_address: 172.26.0.14
+    healthcheck:
+      test: ["CMD", "pgrep", "-f", "open5gs-smfd"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  # UPF - User Plane Function (PGW-U in 4G terms)
+  upf:
+    build:
+      context: ./open5gs
+      dockerfile: Dockerfile
+    container_name: open5g2go-upf
+    restart: unless-stopped
+    command: open5gs-upfd
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun
+    sysctls:
+      - net.ipv4.ip_forward=1
+    volumes:
+      - ./open5gs/config/upf.yaml:/etc/open5gs/upf.yaml:ro
+      - open5gs_logs:/var/log/open5gs
+    networks:
+      open5g2go:
+        ipv4_address: 172.26.0.15
+    healthcheck:
+      test: ["CMD", "pgrep", "-f", "open5gs-upfd"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  # =============================================================================
+  # Management Stack
+  # =============================================================================
+
+  # Backend - FastAPI REST API
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: open5g2go-backend
+    restart: unless-stopped
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    environment:
+      - MONGODB_URI=mongodb://mongodb:27017/open5gs
+      - DEBUG=false
+      - APP_NAME=Open5G2GO API
+    volumes:
+      - open5gs_logs:/var/log/open5gs:ro  # Read-only access for log parsing
+    networks:
+      open5g2go:
+        ipv4_address: 172.26.0.20
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # Frontend - React SPA with nginx
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    container_name: open5g2go-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "8080:80"  # Web UI
+    networks:
+      open5g2go:
+        ipv4_address: 172.26.0.21
+
+# =============================================================================
+# Networks
+# =============================================================================
+networks:
+  open5g2go:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.26.0.0/16
+          gateway: 172.26.0.1
+
+# =============================================================================
+# Volumes
+# =============================================================================
+volumes:
+  mongodb_data:
+    driver: local
+  open5gs_logs:
+    driver: local

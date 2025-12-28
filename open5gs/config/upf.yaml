@@ -1,0 +1,33 @@
+# Open5GS UPF (User Plane Function) Configuration
+# Handles user data plane (PGW-U role in 4G terms)
+
+logger:
+  file:
+    path: /var/log/open5gs/upf.log
+  level: info
+
+global:
+  max:
+    ue: 100
+
+upf:
+  # PFCP interface from SMF
+  pfcp:
+    server:
+      - address: 172.26.0.15
+    client:
+      smf:
+        - address: 172.26.0.14
+
+  # GTP-U interface
+  gtpu:
+    server:
+      - address: 172.26.0.15
+        advertise: 10.48.0.110  # Docker host IP
+
+  # UE IP pool and TUN interface
+  session:
+    - subnet: 10.48.99.0/24
+      gateway: 10.48.99.1
+      dnn: internet
+      dev: ogstun  # TUN device name

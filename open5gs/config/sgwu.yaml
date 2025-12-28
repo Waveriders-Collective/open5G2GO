@@ -1,0 +1,26 @@
+# Open5GS SGWU (Serving Gateway User Plane) Configuration
+# Handles GTP-U user data plane for the Serving Gateway
+
+logger:
+  file:
+    path: /var/log/open5gs/sgwu.log
+  level: info
+
+global:
+  max:
+    ue: 100
+
+sgwu:
+  # GTP-U interface - receives user data from eNodeB
+  gtpu:
+    server:
+      - address: 172.26.0.13
+        advertise: 10.48.0.110  # Docker host IP (eNodeB sees this)
+
+  # PFCP interface to SGWC
+  pfcp:
+    server:
+      - address: 172.26.0.13
+    client:
+      sgwc:
+        - address: 172.26.0.12

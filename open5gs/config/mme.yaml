@@ -1,0 +1,62 @@
+# Open5GS MME (Mobility Management Entity) Configuration
+# Control plane - handles S1AP interface to eNodeB
+
+logger:
+  file:
+    path: /var/log/open5gs/mme.log
+  level: info
+
+global:
+  max:
+    ue: 100
+
+mme:
+  freeDiameter: /etc/freeDiameter/mme.conf
+
+  # S1AP interface - eNodeB connects here
+  s1ap:
+    server:
+      - address: 0.0.0.0  # Listen on all interfaces
+        port: 36412
+
+  # GTP-C interface to SGWC and SMF
+  gtpc:
+    server:
+      - address: 172.26.0.11
+    client:
+      sgwc:
+        - address: 172.26.0.12
+      smf:
+        - address: 172.26.0.14
+
+  # GUMMEI (Globally Unique MME Identifier)
+  gummei:
+    - plmn_id:
+        mcc: "315"
+        mnc: "010"
+      mme_gid: 2
+      mme_code: 1
+
+  # TAI (Tracking Area Identity)
+  tai:
+    - plmn_id:
+        mcc: "315"
+        mnc: "010"
+      tac: 1
+
+  # Security algorithms (ordered by preference)
+  # NOTE: EEA0 = null encryption (no user data encryption)
+  # For lab environment, this is acceptable. For production, use [EEA2, EEA1, EEA0]
+  security:
+    integrity_order: [EIA2, EIA1, EIA0]
+    ciphering_order: [EEA0, EEA1, EEA2]
+
+  network_name:
+    full: Open5G2GO
+    short: O5G2GO
+
+  mme_name: open5g2go-mme
+
+  # Timer values
+  t3412:
+    value: 540  # Periodic TAU timer in seconds

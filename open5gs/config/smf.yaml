@@ -1,0 +1,53 @@
+# Open5GS SMF (Session Management Function) Configuration
+# Manages PDN sessions (PGW-C role in 4G terms)
+
+logger:
+  file:
+    path: /var/log/open5gs/smf.log
+  level: info
+
+global:
+  max:
+    ue: 100
+
+smf:
+  freeDiameter: /etc/freeDiameter/smf.conf
+
+  # GTP-C interface (from MME and SGWC)
+  gtpc:
+    server:
+      - address: 172.26.0.14
+
+  # GTP-U interface
+  gtpu:
+    server:
+      - address: 172.26.0.14
+
+  # PFCP interface to UPF
+  pfcp:
+    server:
+      - address: 172.26.0.14
+    client:
+      upf:
+        - address: 172.26.0.15
+
+  # UE IP pool configuration (10.48.99.0/24 as per plan)
+  session:
+    - subnet: 10.48.99.0/24
+      gateway: 10.48.99.1
+      dnn: internet
+
+  # DNS servers for UE
+  dns:
+    - 8.8.8.8
+    - 8.8.4.4
+
+  # MTU for UE traffic
+  mtu: 1400
+
+  # Disable 5G NRF for 4G-only deployment
+  sbi:
+    server:
+      - address: 127.0.0.1
+        port: 7777
+    # client: not needed for 4G-only deployment

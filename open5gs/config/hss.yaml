@@ -1,0 +1,16 @@
+# Open5GS HSS (Home Subscriber Server) Configuration
+# Handles subscriber authentication and subscription data
+
+db_uri: mongodb://mongodb/open5gs
+
+logger:
+  file:
+    path: /var/log/open5gs/hss.log
+  level: info
+
+global:
+  max:
+    ue: 100  # MVP: max 100 subscribers
+
+hss:
+  freeDiameter: /etc/freeDiameter/hss.conf
