@@ -471,6 +471,14 @@ class Open5GSService:
                     "registered_count": registered_count,
                     "authorized_count": authorized_count,
                     "enodebs": sas_enodebs,
+                },
+                # Network identity from MME config (what the MME accepts)
+                "network": {
+                    "plmn": PLMNID,
+                    "mcc": MCC,
+                    "mnc": MNC,
+                    "tac": TAC,
+                    "network_name": NETWORK_NAME_SHORT,
                 }
             }
         except Exception as e:

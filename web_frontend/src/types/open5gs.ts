@@ -163,6 +163,11 @@ export interface ENodeBStatus {
   sas_state: string;
   config_name: string;
   location: string;
+  ip_address?: string;
+  port?: number;
+  sctp_streams?: number;
+  connected?: boolean;
+  connected_at?: string;
   active_grant?: GrantInfo;
   grants: GrantInfo[];
 }
@@ -179,6 +184,13 @@ export interface EnodebStatusResponse {
     registered_count: number;
     authorized_count: number;
     enodebs: ENodeBStatus[];
+  };
+  network?: {
+    plmn: string;
+    mcc: string;
+    mnc: string;
+    tac: number;
+    network_name: string;
   };
 }
 

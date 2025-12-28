@@ -261,6 +261,33 @@ export const Dashboard: React.FC = () => {
                       <p className="text-sm text-gray-medium font-body mt-1">
                         {enb.location || 'Location not set'} | S/N: {enb.serial_number}
                       </p>
+                      {/* S1AP Connection Details */}
+                      {isConnected && enb.ip_address && (
+                        <div className="flex items-center gap-4 mt-2 text-xs font-body text-gray-dark">
+                          <span className="flex items-center gap-1">
+                            <span className="text-gray-medium">IP:</span>
+                            <span className="font-mono">{enb.ip_address}:{enb.port || 36412}</span>
+                          </span>
+                          {enodebStatus?.network && (
+                            <>
+                              <span className="flex items-center gap-1">
+                                <span className="text-gray-medium">PLMN:</span>
+                                <span className="font-mono">{enodebStatus.network.mcc}/{enodebStatus.network.mnc}</span>
+                              </span>
+                              <span className="flex items-center gap-1">
+                                <span className="text-gray-medium">TAC:</span>
+                                <span className="font-mono">{enodebStatus.network.tac}</span>
+                              </span>
+                            </>
+                          )}
+                          {enb.sctp_streams && (
+                            <span className="flex items-center gap-1">
+                              <span className="text-gray-medium">SCTP Streams:</span>
+                              <span>{enb.sctp_streams}</span>
+                            </span>
+                          )}
+                        </div>
+                      )}
                     </div>
 
                     <div className="flex items-center gap-4">

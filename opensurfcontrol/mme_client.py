@@ -30,6 +30,7 @@ class S1APConnection:
     port: int
     connected_at: Optional[datetime] = None
     is_connected: bool = True
+    sctp_streams: Optional[int] = None  # max_num_of_ostreams from logs
 
 
 @dataclass
@@ -69,6 +70,11 @@ TIMESTAMP_PATTERN = re.compile(
 # Format varies but commonly includes eNB_ID
 ENB_ID_PATTERN = re.compile(
     r"eNB_ID\[(\w+)\]|S1SetupRequest.*?eNB.*?(\d+)"
+)
+
+# Pattern: eNB-S1[10.48.0.159] max_num_of_ostreams : 10
+SCTP_STREAMS_PATTERN = re.compile(
+    r"eNB-S1\[(\d+\.\d+\.\d+\.\d+)\] max_num_of_ostreams\s*:\s*(\d+)"
 )
 
 
@@ -146,6 +152,14 @@ class MMELogParser:
                     # Remove from refused if previously refused
                     refused_ips.discard(ip)
 
+                # Check for SCTP streams info
+                streams_match = SCTP_STREAMS_PATTERN.search(line)
+                if streams_match:
+                    ip = streams_match.group(1)
+                    streams = int(streams_match.group(2))
+                    if ip in connections:
+                        connections[ip].sctp_streams = streams
+
                 # Check for refused connections
                 refused_match = S1AP_REFUSED_PATTERN.search(line)
                 if refused_match:
@@ -197,9 +211,11 @@ class MMELogParser:
             {
                 "id": conn.enb_id,
                 "ip": conn.ip_address,
+                "port": conn.port,
                 "name": f"eNodeB @ {conn.ip_address}",
                 "connected": conn.is_connected,
                 "connected_at": conn.connected_at.isoformat() if conn.connected_at else None,
+                "sctp_streams": conn.sctp_streams,
             }
             for conn in connections.values()
             if conn.is_connected
