@@ -53,9 +53,7 @@ from .formatters import (
     format_network_config_json,
     format_add_subscriber_result,
 )
-from .sas_client import get_sas_client, GoogleSASClient
 from .mme_client import get_mme_parser, MMELogParser
-from .grant_history import get_history_store, GrantHistoryStore
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -890,7 +888,7 @@ async def open5gs_update_subscriber(params: UpdateSubscriberInput) -> str:
 
 
 # ============================================================================
-# Tool 9: Get eNodeB Status (S1AP + SAS)
+# Tool 9: Get eNodeB Status (S1AP Connection)
 # ============================================================================
 
 class EnodebStatusInput(BaseModel):
@@ -903,10 +901,6 @@ class EnodebStatusInput(BaseModel):
     serial_number: Optional[str] = Field(
         default=None,
         description="Specific eNodeB serial number. If omitted, returns all eNodeBs."
-    )
-    include_history: bool = Field(
-        default=False,
-        description="Include 24h grant history for each eNodeB"
     )
     response_format: ResponseFormat = Field(
         default=ResponseFormat.JSON,
@@ -926,18 +920,14 @@ class EnodebStatusInput(BaseModel):
 )
 async def open5gs_get_enodeb_status(params: EnodebStatusInput) -> str:
     """
-    Get combined eNodeB status from Open5GS (S1AP) and Google SAS (grants).
+    Get eNodeB S1AP connection status from Open5GS MME.
 
-    This tool provides a unified view of eNodeB status showing:
+    This tool provides eNodeB status showing:
     - S1AP connection status (is the eNodeB connected to the MME?)
-    - SAS registration status (REGISTERED, DEREGISTERED)
-    - Active grant status (AUTHORIZED, SUSPENDED, EXPIRED)
-    - Grant frequency range and power level
 
     Args:
         params (EnodebStatusInput): Input parameters containing:
             - serial_number (str, optional): Specific eNodeB serial
-            - include_history (bool): Include 24h grant state changes
             - response_format (ResponseFormat): Output format
 
     Returns:
@@ -945,7 +935,6 @@ async def open5gs_get_enodeb_status(params: EnodebStatusInput) -> str:
 
     Examples:
         - Use when: "Is the eNodeB connected?"
-        - Use when: "What is the SAS grant status?"
         - Use when: "Show me all eNodeB status"
     """
     try:
@@ -953,47 +942,21 @@ async def open5gs_get_enodeb_status(params: EnodebStatusInput) -> str:
         mme = get_mme_parser()
         s1ap_status = mme.get_connection_status_summary()
 
-        # Get SAS status from Google API
-        sas = get_sas_client()
-        sas_status = sas.get_status_summary()
-
-        # Combine statuses
-        combined = {
+        # Build status response
+        result = {
             "timestamp": __import__('datetime').datetime.utcnow().isoformat(),
             "s1ap": {
                 "available": s1ap_status.get("available", False),
                 "connected_count": s1ap_status.get("total_connected", 0),
                 "enodebs": s1ap_status.get("enodebs", [])
-            },
-            "sas": {
-                "available": sas_status.get("available", False),
-                "registered_count": sas_status.get("registered", 0),
-                "authorized_count": sas_status.get("authorized", 0),
-                "enodebs": sas_status.get("enodebs", [])
             }
         }
 
-        # If specific serial requested, filter to that eNodeB
-        if params.serial_number:
-            sas_enb = next(
-                (e for e in combined["sas"]["enodebs"]
-                 if e.get("serial_number") == params.serial_number),
-                None
-            )
-
-            if sas_enb and params.include_history:
-                history_store = get_history_store()
-                sas_enb["grant_history"] = history_store.get_grant_state_changes(
-                    params.serial_number, hours=24
-                )
-
-            combined["sas"]["enodebs"] = [sas_enb] if sas_enb else []
-
         # Format response
         if params.response_format == ResponseFormat.JSON:
-            return json.dumps(combined, indent=2, default=str)
+            return json.dumps(result, indent=2, default=str)
         else:
-            return _format_enodeb_status_markdown(combined)
+            return _format_enodeb_status_markdown(result)
 
     except Exception as e:
         logger.error(f"Error getting eNodeB status: {e}")
@@ -1017,230 +980,7 @@ def _format_enodeb_status_markdown(status: dict) -> str:
         for enb in s1ap.get("enodebs", []):
             lines.append(f"- {enb.get('name', 'Unknown')} ({enb.get('ip', 'N/A')})")
 
-    # SAS Section
-    sas = status.get("sas", {})
-    lines.append("\n## SAS Registration (Google CBRS)")
-    if not sas.get("available"):
-        lines.append("*SAS status unavailable - API not configured*\n")
-    else:
-        lines.append(f"**Registered:** {sas.get('registered_count', 0)}")
-        lines.append(f"**Authorized (Active Grant):** {sas.get('authorized_count', 0)}\n")
-
-        for enb in sas.get("enodebs", []):
-            name = enb.get("config_name", enb.get("serial_number", "Unknown"))
-            state = enb.get("sas_state", "UNKNOWN")
-            grant = enb.get("active_grant")
-
-            lines.append(f"### {name}")
-            lines.append(f"- **Serial:** {enb.get('serial_number', 'N/A')}")
-            lines.append(f"- **FCC ID:** {enb.get('fcc_id', 'N/A')}")
-            lines.append(f"- **SAS State:** {state}")
-
-            if grant:
-                freq = grant.get("frequency_mhz", {})
-                lines.append(f"- **Grant:** {grant.get('state', 'N/A')}")
-                lines.append(f"- **Frequency:** {freq.get('low', '?')}-{freq.get('high', '?')} MHz")
-                lines.append(f"- **Channel Type:** {grant.get('channel_type', 'N/A')}")
-            else:
-                lines.append("- **Grant:** No active grant")
-
-            lines.append("")
-
     return "\n".join(lines)
-
-
-# ============================================================================
-# Tool 10: Get SAS Grant History
-# ============================================================================
-
-class GrantHistoryInput(BaseModel):
-    """Input for grant history query."""
-    model_config = ConfigDict(
-        str_strip_whitespace=True,
-        validate_assignment=True
-    )
-
-    serial_number: str = Field(
-        ...,
-        description="eNodeB serial number to get history for"
-    )
-    hours: int = Field(
-        default=24,
-        description="Number of hours of history to retrieve (max 168)",
-        ge=1,
-        le=168
-    )
-    response_format: ResponseFormat = Field(
-        default=ResponseFormat.JSON,
-        description="Output format: 'markdown' or 'json'"
-    )
-
-
-@mcp.tool(
-    name="open5gs_get_grant_history",
-    annotations={
-        "title": "Get SAS Grant History",
-        "readOnlyHint": True,
-        "destructiveHint": False,
-        "idempotentHint": True,
-        "openWorldHint": True
-    }
-)
-async def open5gs_get_grant_history(params: GrantHistoryInput) -> str:
-    """
-    Get SAS grant state change history for an eNodeB.
-
-    Shows grant state transitions over time, including:
-    - When grants were authorized
-    - When grants were suspended (DPA events)
-    - When grants expired or were terminated
-
-    Args:
-        params (GrantHistoryInput): Input parameters containing:
-            - serial_number (str): eNodeB serial number
-            - hours (int): Hours of history (default 24, max 168)
-            - response_format (ResponseFormat): Output format
-
-    Returns:
-        str: Grant history in requested format.
-
-    Examples:
-        - Use when: "Show me grant history for eNodeB-01"
-        - Use when: "Were there any DPA suspensions today?"
-    """
-    try:
-        history_store = get_history_store()
-
-        # Get state changes
-        changes = history_store.get_grant_state_changes(
-            params.serial_number,
-            hours=params.hours
-        )
-
-        result = {
-            "serial_number": params.serial_number,
-            "hours": params.hours,
-            "total_changes": len(changes),
-            "changes": changes
-        }
-
-        if params.response_format == ResponseFormat.JSON:
-            return json.dumps(result, indent=2, default=str)
-        else:
-            return _format_grant_history_markdown(result)
-
-    except Exception as e:
-        logger.error(f"Error getting grant history: {e}")
-        return json.dumps({
-            "success": False,
-            "error": f"Failed to get grant history: {str(e)}"
-        })
-
-
-def _format_grant_history_markdown(history: dict) -> str:
-    """Format grant history as markdown."""
-    lines = [
-        f"# Grant History: {history.get('serial_number', 'Unknown')}",
-        f"**Time Range:** Last {history.get('hours', 24)} hours",
-        f"**Total State Changes:** {history.get('total_changes', 0)}\n",
-    ]
-
-    changes = history.get("changes", [])
-    if not changes:
-        lines.append("*No state changes recorded in this period*")
-    else:
-        lines.append("| Timestamp | Type | From | To |")
-        lines.append("|-----------|------|------|-----|")
-        for change in changes:
-            ts = change.get("timestamp", "")
-            if hasattr(ts, "strftime"):
-                ts = ts.strftime("%Y-%m-%d %H:%M")
-            change_type = change.get("type", "unknown")
-            from_state = change.get("from_state", "-")
-            to_state = change.get("to_state", "-")
-            lines.append(f"| {ts} | {change_type} | {from_state} | {to_state} |")
-
-    return "\n".join(lines)
-
-
-# ============================================================================
-# Tool 11: Refresh SAS Status (Poll and Store)
-# ============================================================================
-
-@mcp.tool(
-    name="open5gs_refresh_sas_status",
-    annotations={
-        "title": "Refresh SAS Status",
-        "readOnlyHint": False,
-        "destructiveHint": False,
-        "idempotentHint": True,
-        "openWorldHint": True
-    }
-)
-async def open5gs_refresh_sas_status(params: BaseInput) -> str:
-    """
-    Poll Google SAS API and store current grant status.
-
-    This tool manually triggers a SAS status poll and stores the
-    snapshot for history tracking. Normally this runs automatically
-    on a timer, but can be triggered manually.
-
-    Args:
-        params (BaseInput): Input parameters containing:
-            - response_format (ResponseFormat): Output format
-
-    Returns:
-        str: Poll results.
-    """
-    try:
-        sas = get_sas_client()
-
-        if not sas.is_available():
-            return json.dumps({
-                "success": False,
-                "error": "SAS API not configured. Check GOOGLE_APPLICATION_CREDENTIALS."
-            })
-
-        # Get all eNodeB statuses
-        statuses = sas.get_all_enodeb_status()
-
-        # Store snapshots
-        history_store = get_history_store()
-        stored = history_store.store_all_snapshots(statuses)
-
-        # Cleanup old history
-        config = sas.config
-        hours = config.get("grant_history_hours", 24)
-        deleted = history_store.cleanup_old_history(hours)
-
-        result = {
-            "success": True,
-            "timestamp": __import__('datetime').datetime.utcnow().isoformat(),
-            "enodebs_polled": len(statuses),
-            "snapshots_stored": stored,
-            "old_records_cleaned": deleted,
-            "statuses": statuses
-        }
-
-        if params.response_format == ResponseFormat.JSON:
-            return json.dumps(result, indent=2, default=str)
-        else:
-            return f"""# SAS Status Refresh
-
-**Timestamp:** {result['timestamp']}
-**eNodeBs Polled:** {result['enodebs_polled']}
-**Snapshots Stored:** {result['snapshots_stored']}
-**Old Records Cleaned:** {result['old_records_cleaned']}
-
-Refresh complete. Use `open5gs_get_enodeb_status` to view current status.
-"""
-
-    except Exception as e:
-        logger.error(f"Error refreshing SAS status: {e}")
-        return json.dumps({
-            "success": False,
-            "error": f"Failed to refresh SAS status: {str(e)}"
-        })
 
 
 # ============================================================================

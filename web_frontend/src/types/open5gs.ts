@@ -147,20 +147,9 @@ export interface SubscriberOperationResponse {
   error?: string;
 }
 
-// eNodeB and SAS Status types
-export interface GrantInfo {
-  grant_id: string;
-  state: string;
-  frequency_mhz: number;
-  max_eirp_dbm: number;
-  channel_type: 'GAA' | 'PAL';
-  expire_time: string;
-}
-
+// eNodeB Status types
 export interface ENodeBStatus {
   serial_number: string;
-  fcc_id: string;
-  sas_state: string;
   config_name: string;
   location: string;
   ip_address?: string;
@@ -168,8 +157,6 @@ export interface ENodeBStatus {
   sctp_streams?: number;
   connected?: boolean;
   connected_at?: string;
-  active_grant?: GrantInfo;
-  grants: GrantInfo[];
 }
 
 // SNMP monitoring status for Baicells eNodeBs
@@ -240,12 +227,6 @@ export interface EnodebStatusResponse {
     configured_count: number;
     enodebs: SNMPEnodebStatus[];
   };
-  sas: {
-    available: boolean;
-    registered_count: number;
-    authorized_count: number;
-    enodebs: ENodeBStatus[];
-  };
   network?: {
     plmn: string;
     mcc: string;
@@ -253,16 +234,4 @@ export interface EnodebStatusResponse {
     tac: number;
     network_name: string;
   };
-}
-
-export interface GrantHistoryResponse {
-  serial_number: string;
-  timestamp: string;
-  history: GrantInfo[];
-}
-
-export interface RefreshSasResponse {
-  success: boolean;
-  message: string;
-  timestamp: string;
 }

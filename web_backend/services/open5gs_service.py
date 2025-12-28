@@ -9,9 +9,11 @@ import logging
 from datetime import datetime, timezone
 from typing import Dict, Any, Optional, List
 
+import yaml
+from pathlib import Path
+
 from opensurfcontrol.mongodb_client import Open5GSClient, get_client
 from opensurfcontrol.mme_client import get_mme_parser
-from opensurfcontrol.sas_client import get_sas_client, load_enodeb_config
 from opensurfcontrol.snmp_client import get_snmp_client
 from opensurfcontrol.constants import (
     IMSI_PREFIX,
@@ -30,6 +32,39 @@ from opensurfcontrol.constants import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+def load_enodeb_config(config_path: Optional[str] = None) -> Dict[str, Any]:
+    """
+    Load eNodeB configuration from YAML file.
+
+    Args:
+        config_path: Path to enodebs.yaml. If None, uses default locations.
+
+    Returns:
+        Dict containing eNodeB configuration.
+    """
+    if config_path is None:
+        # Try common locations
+        search_paths = [
+            Path("/app/config/enodebs.yaml"),  # Docker container
+            Path("config/enodebs.yaml"),        # Local dev
+            Path("../config/enodebs.yaml"),     # From opensurfcontrol/
+        ]
+
+        for path in search_paths:
+            if path.exists():
+                config_path = str(path)
+                break
+
+    if config_path is None or not Path(config_path).exists():
+        logger.warning("eNodeB config not found, using empty configuration")
+        return {"enodebs": []}
+
+    with open(config_path, 'r') as f:
+        config = yaml.safe_load(f)
+
+    return config or {}
 
 
 class Open5GSService:
@@ -369,16 +404,15 @@ class Open5GSService:
 
     async def get_enodeb_status(self) -> Dict[str, Any]:
         """
-        Get combined eNodeB status from S1AP connections, SNMP, and SAS.
+        Get combined eNodeB status from S1AP connections and SNMP.
 
         Combines:
         - S1AP connection status from MME log parsing
         - SNMP monitoring data from Baicells eNodeBs (if configured)
         - eNodeB configuration from enodebs.yaml
-        - SAS registration/grant status from Google SAS Portal (if configured)
 
         Returns:
-            EnodebStatusResponse with s1ap, snmp, and sas status.
+            EnodebStatusResponse with s1ap and snmp status.
         """
         try:
             # Get S1AP connection status from MME logs
@@ -409,11 +443,6 @@ class Open5GSService:
                 ]
                 if ip_addresses:
                     snmp_statuses = await snmp_client.get_status_multiple(ip_addresses)
-
-            # Get SAS status
-            sas_client = get_sas_client()
-            sas_available = sas_client.is_available()
-            sas_statuses = sas_client.get_all_enodeb_status() if sas_available else []
 
             # Build S1AP eNodeB list from config, with connection status
             s1ap_enodebs = []
@@ -446,8 +475,6 @@ class Open5GSService:
 
                 s1ap_enodebs.append({
                     "serial_number": serial,
-                    "fcc_id": enb_config.get("fcc_id", ""),
-                    "sas_state": "",  # S1AP doesn't know SAS state
                     "config_name": enb_config.get("name", f"eNodeB-{serial[-4:]}"),
                     "location": enb_config.get("location", ""),
                     "ip_address": enb_ip,
@@ -455,7 +482,6 @@ class Open5GSService:
                     "sctp_streams": sctp_streams,
                     "connected": is_connected,
                     "connected_at": connected_at,
-                    "grants": [],
                 })
 
             # Build SNMP eNodeB list
@@ -478,35 +504,6 @@ class Open5GSService:
                         **snmp_status.to_dict(),
                     })
 
-            # Build SAS eNodeB list
-            sas_enodebs = []
-            for sas_status in sas_statuses:
-                # Find matching config for this serial
-                serial = sas_status.get("serial_number", "")
-                enb_config = next(
-                    (e for e in configured_enodebs if e.get("serial_number") == serial),
-                    {}
-                )
-
-                sas_enodebs.append({
-                    "serial_number": serial,
-                    "fcc_id": sas_status.get("fcc_id", enb_config.get("fcc_id", "")),
-                    "sas_state": sas_status.get("sas_state", "UNKNOWN"),
-                    "config_name": sas_status.get("config_name", enb_config.get("name", "")),
-                    "location": sas_status.get("location", enb_config.get("location", "")),
-                    "active_grant": sas_status.get("active_grant"),
-                    "grants": sas_status.get("grants", []),
-                })
-
-            # Count SAS states
-            registered_count = sum(
-                1 for s in sas_statuses
-                if s.get("sas_state") in ("REGISTERED", "GRANT_STATE_AUTHORIZED")
-            )
-            authorized_count = sum(
-                1 for s in sas_statuses if s.get("active_grant") is not None
-            )
-
             # Count SNMP reachable
             snmp_reachable_count = sum(
                 1 for s in snmp_statuses.values() if s.reachable
@@ -526,12 +523,6 @@ class Open5GSService:
                     "reachable_count": snmp_reachable_count,
                     "configured_count": len([e for e in configured_enodebs if e.get("ip_address")]),
                     "enodebs": snmp_enodebs,
-                },
-                "sas": {
-                    "available": sas_available,
-                    "registered_count": registered_count,
-                    "authorized_count": authorized_count,
-                    "enodebs": sas_enodebs,
                 },
                 # Network identity from MME config (what the MME accepts)
                 "network": {
@@ -559,12 +550,6 @@ class Open5GSService:
                     "configured_count": 0,
                     "enodebs": [],
                 },
-                "sas": {
-                    "available": False,
-                    "registered_count": 0,
-                    "authorized_count": 0,
-                    "enodebs": [],
-                }
             }
 
     def _get_subscriber_ip(self, subscriber: Dict[str, Any]) -> Optional[str]:

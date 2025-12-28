@@ -3,7 +3,7 @@
 # =============================================================================
 #
 # This file defines the Baicells eNodeBs in your deployment and their
-# monitoring configuration for SNMP and (optionally) SAS status.
+# monitoring configuration for SNMP.
 #
 # Configuration is read at startup. Restart the backend service after changes.
 #
@@ -21,35 +21,15 @@ snmp:
   poll_interval_seconds: 30
 
 # =============================================================================
-# Google SAS Settings (Optional)
-# =============================================================================
-# Google SAS Portal API requires invitation-only access (issue #1)
-# Leave sas_customer_id empty to disable SAS integration
-
-# Google SAS customer/organization identifier
-# Format: customers/{customer-id}
-sas_customer_id: "customers/rollinson-co-sas"
-
-# Grant history retention (stored in MongoDB for UI display)
-grant_history_hours: 24
-
-# Poll interval for SAS status updates (seconds)
-# Google SAS has rate limits, so keep this reasonable (60-300 seconds)
-sas_poll_interval_seconds: 120
-
-# =============================================================================
 # eNodeB Definitions
 # =============================================================================
 # Each eNodeB entry requires:
-#   - serial_number: Manufacturer serial (must match SAS Portal if used)
+#   - serial_number: Manufacturer serial number
 #   - name: Friendly display name for the UI
 #   - location: Physical location description
 #
 # For SNMP monitoring (recommended):
 #   - ip_address: Management IP address of the eNodeB
-#
-# For SAS integration (optional - requires invitation-only API access):
-#   - fcc_id: FCC equipment authorization ID
 #
 # Optional fields:
 #   - enabled: Set to false to skip this eNodeB in status checks
@@ -59,7 +39,6 @@ enodebs:
   # Baicells Nova 430i for Open5G2GO test deployment
   - serial_number: "120200046421CKY0606"
     ip_address: "10.48.0.159"  # Management IP for SNMP queries
-    fcc_id: "P27-NOVA430I"
     name: "Nova-430i-Test"
     location: "Test Lab"
     enabled: true
@@ -68,15 +47,9 @@ enodebs:
 # Notes
 # =============================================================================
 #
-# Baicells FCC IDs for common models:
-#   - Nova 436H (Cat B): P27-NOVA436H
-#   - Nova 436Q (Cat A): P27-NOVA436Q
-#   - Neutrino 430 (Cat A): P27-NEUTRINO430
-#
 # To find your serial numbers:
 #   1. Check the label on the eNodeB hardware
 #   2. Log into the eNodeB web interface (Status page)
-#   3. Check your Google SAS Portal device list
 #
-# Google SAS Portal: https://sas.google.com/
 # Baicells CloudCore: https://cloudcore.baicells.com/
+#

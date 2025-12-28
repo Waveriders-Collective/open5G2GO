@@ -18,8 +18,6 @@ import type {
   UpdateSubscriberRequest,
   SubscriberOperationResponse,
   EnodebStatusResponse,
-  GrantHistoryResponse,
-  RefreshSasResponse,
 } from '../types/open5gs';
 
 class ApiClient {
@@ -98,21 +96,9 @@ class ApiClient {
     return response.data;
   }
 
-  // Get eNodeB status (S1AP + SAS)
+  // Get eNodeB status (S1AP)
   async getEnodebStatus(): Promise<EnodebStatusResponse> {
     const response = await this.client.get<EnodebStatusResponse>('/enodeb/status');
-    return response.data;
-  }
-
-  // Get grant history for specific eNodeB
-  async getGrantHistory(serial: string): Promise<GrantHistoryResponse> {
-    const response = await this.client.get<GrantHistoryResponse>(`/enodeb/${serial}/history`);
-    return response.data;
-  }
-
-  // Refresh SAS status
-  async refreshSasStatus(): Promise<RefreshSasResponse> {
-    const response = await this.client.post<RefreshSasResponse>('/enodeb/refresh');
     return response.data;
   }
 }
