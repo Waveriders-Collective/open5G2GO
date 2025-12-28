@@ -36,19 +36,12 @@ sas_poll_interval_seconds: 120
 #
 
 enodebs:
-  # Example Baicells Nova 436H eNodeB
-  - serial_number: "2009CW5000123"
-    fcc_id: "P27-NOVA436H"
-    name: "eNodeB-01"
-    location: "Main Building - Ceiling Mount"
+  # Baicells Nova 430i for Open5G2GO test deployment
+  - serial_number: "120200046421CKY0606"
+    fcc_id: "P27-NOVA430I"
+    name: "Nova-430i-Test"
+    location: "Test Lab"
     enabled: true
-
-  # Add more eNodeBs as needed:
-  # - serial_number: "2009CW5000456"
-  #   fcc_id: "P27-NOVA436H"
-  #   name: "eNodeB-02"
-  #   location: "Warehouse"
-  #   enabled: true
 
 # =============================================================================
 # Notes
