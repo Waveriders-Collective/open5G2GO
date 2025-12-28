@@ -492,3 +492,95 @@ async def delete_subscriber(
         )
 
     return result
+
+
+# ============================================================================
+# eNodeB Status Endpoints
+# ============================================================================
+
+@router.get(
+    "/enodeb/status",
+    tags=["eNodeB"],
+    summary="Get eNodeB connection and SAS status",
+    response_description="Combined S1AP and SAS status for all configured eNodeBs"
+)
+async def get_enodeb_status(
+    service: Open5GSService = Depends(get_service)
+) -> Dict[str, Any]:
+    """
+    Get combined eNodeB status including S1AP connections and SAS grants.
+
+    Returns status for all configured eNodeBs from enodebs.yaml, including:
+    - S1AP connection status (from MME log parsing)
+    - SAS registration and grant status (if Google SAS API is configured)
+
+    **Example Response:**
+    ```json
+    {
+      "timestamp": "2024-01-15 10:30:00 UTC",
+      "s1ap": {
+        "available": true,
+        "connected_count": 1,
+        "enodebs": [{
+          "serial_number": "120200046421CKY0606",
+          "config_name": "Nova-430i-Test",
+          "location": "Test Lab",
+          "connected": true,
+          "ip_address": "10.48.0.159"
+        }]
+      },
+      "sas": {
+        "available": false,
+        "registered_count": 0,
+        "authorized_count": 0,
+        "enodebs": []
+      }
+    }
+    ```
+    """
+    logger.info("Getting eNodeB status")
+    result = await service.get_enodeb_status()
+
+    if "error" in result and result.get("s1ap", {}).get("available") is False:
+        logger.error(f"Error getting eNodeB status: {result.get('error')}")
+        # Return the result anyway for partial data display
+
+    return result
+
+
+@router.post(
+    "/enodeb/refresh",
+    tags=["eNodeB"],
+    summary="Refresh SAS status",
+    response_description="Refresh result"
+)
+async def refresh_sas_status(
+    service: Open5GSService = Depends(get_service)
+) -> Dict[str, Any]:
+    """
+    Trigger a manual refresh of SAS status for all eNodeBs.
+
+    This polls the Google SAS Portal API for the latest grant status.
+    Note: SAS API must be configured with valid credentials.
+
+    **Example Response:**
+    ```json
+    {
+      "success": true,
+      "message": "SAS status refreshed",
+      "timestamp": "2024-01-15 10:30:00 UTC"
+    }
+    ```
+    """
+    logger.info("Refreshing SAS status")
+
+    # Get fresh status (this triggers a new poll)
+    result = await service.get_enodeb_status()
+
+    sas_available = result.get("sas", {}).get("available", False)
+
+    return {
+        "success": True,
+        "message": "SAS status refreshed" if sas_available else "SAS not configured",
+        "timestamp": result.get("timestamp", "")
+    }

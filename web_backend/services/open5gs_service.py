@@ -11,6 +11,7 @@ from typing import Dict, Any, Optional, List
 
 from opensurfcontrol.mongodb_client import Open5GSClient, get_client
 from opensurfcontrol.mme_client import get_mme_parser
+from opensurfcontrol.sas_client import get_sas_client, load_enodeb_config
 from opensurfcontrol.constants import (
     IMSI_PREFIX,
     DEFAULT_APN,
@@ -364,6 +365,131 @@ class Open5GSService:
             "connections": [],
             "note": "Real-time connection tracking requires log parsing (Phase 2)"
         }
+
+    async def get_enodeb_status(self) -> Dict[str, Any]:
+        """
+        Get combined eNodeB status from S1AP connections and SAS.
+
+        Combines:
+        - S1AP connection status from MME log parsing
+        - eNodeB configuration from enodebs.yaml
+        - SAS registration/grant status from Google SAS Portal (if configured)
+
+        Returns:
+            EnodebStatusResponse with s1ap and sas status.
+        """
+        try:
+            # Get S1AP connection status from MME logs
+            mme_parser = get_mme_parser()
+            s1ap_connections = mme_parser.get_connected_enodebs()
+            s1ap_available = mme_parser.is_available()
+
+            # Get connected IPs for matching
+            connected_ips = {conn.get("ip") for conn in s1ap_connections}
+
+            # Load eNodeB configuration
+            config = load_enodeb_config()
+            configured_enodebs = config.get("enodebs", [])
+
+            # Get SAS status
+            sas_client = get_sas_client()
+            sas_available = sas_client.is_available()
+            sas_statuses = sas_client.get_all_enodeb_status() if sas_available else []
+
+            # Build S1AP eNodeB list from config, with connection status
+            s1ap_enodebs = []
+            for enb_config in configured_enodebs:
+                if not enb_config.get("enabled", True):
+                    continue
+
+                serial = enb_config.get("serial_number", "")
+
+                # For single eNodeB deployments, assume any connection matches
+                # In multi-eNodeB setups, we'd need IP-to-serial mapping in config
+                is_connected = len(connected_ips) > 0
+
+                # Find matching S1AP connection to get IP
+                enb_ip = None
+                connected_at = None
+                if s1ap_connections:
+                    # Use first connection for single-eNodeB setup
+                    first_conn = s1ap_connections[0]
+                    enb_ip = first_conn.get("ip")
+                    connected_at = first_conn.get("connected_at")
+
+                s1ap_enodebs.append({
+                    "serial_number": serial,
+                    "fcc_id": enb_config.get("fcc_id", ""),
+                    "sas_state": "",  # S1AP doesn't know SAS state
+                    "config_name": enb_config.get("name", f"eNodeB-{serial[-4:]}"),
+                    "location": enb_config.get("location", ""),
+                    "ip_address": enb_ip,
+                    "connected": is_connected,
+                    "connected_at": connected_at,
+                    "grants": [],
+                })
+
+            # Build SAS eNodeB list
+            sas_enodebs = []
+            for sas_status in sas_statuses:
+                # Find matching config for this serial
+                serial = sas_status.get("serial_number", "")
+                enb_config = next(
+                    (e for e in configured_enodebs if e.get("serial_number") == serial),
+                    {}
+                )
+
+                sas_enodebs.append({
+                    "serial_number": serial,
+                    "fcc_id": sas_status.get("fcc_id", enb_config.get("fcc_id", "")),
+                    "sas_state": sas_status.get("sas_state", "UNKNOWN"),
+                    "config_name": sas_status.get("config_name", enb_config.get("name", "")),
+                    "location": sas_status.get("location", enb_config.get("location", "")),
+                    "active_grant": sas_status.get("active_grant"),
+                    "grants": sas_status.get("grants", []),
+                })
+
+            # Count SAS states
+            registered_count = sum(
+                1 for s in sas_statuses
+                if s.get("sas_state") in ("REGISTERED", "GRANT_STATE_AUTHORIZED")
+            )
+            authorized_count = sum(
+                1 for s in sas_statuses if s.get("active_grant") is not None
+            )
+
+            return {
+                "timestamp": self._timestamp(),
+                "s1ap": {
+                    "available": s1ap_available,
+                    "connected_count": len(s1ap_connections),
+                    "enodebs": s1ap_enodebs,
+                    "raw_connections": s1ap_connections,  # Include raw data for debugging
+                },
+                "sas": {
+                    "available": sas_available,
+                    "registered_count": registered_count,
+                    "authorized_count": authorized_count,
+                    "enodebs": sas_enodebs,
+                }
+            }
+        except Exception as e:
+            logger.error(f"Error getting eNodeB status: {e}")
+            return {
+                "timestamp": self._timestamp(),
+                "error": str(e),
+                "s1ap": {
+                    "available": False,
+                    "connected_count": 0,
+                    "enodebs": [],
+                },
+                "sas": {
+                    "available": False,
+                    "registered_count": 0,
+                    "authorized_count": 0,
+                    "enodebs": [],
+                }
+            }
 
     def _get_subscriber_ip(self, subscriber: Dict[str, Any]) -> Optional[str]:
         """Extract IP address from subscriber document."""
