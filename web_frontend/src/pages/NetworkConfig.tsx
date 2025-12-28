@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { RefreshCw } from 'lucide-react';
 import { Button, Card, Table, LoadingSpinner } from '../components/ui';
 import { api } from '../services/api';
-import type { NetworkConfigResponse } from '../types/attocore';
+import type { NetworkConfigResponse } from '../types/open5gs';
 
 export const NetworkConfig: React.FC = () => {
   const [data, setData] = useState<NetworkConfigResponse | null>(null);
@@ -15,8 +15,9 @@ export const NetworkConfig: React.FC = () => {
       setError(null);
       const result = await api.getNetworkConfig();
       setData(result);
-    } catch (err: any) {
-      setError(err.response?.data?.error || err.message || 'Failed to load network config');
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { error?: string } }; message?: string };
+      setError(error.response?.data?.error || error.message || 'Failed to load network config');
     } finally {
       setLoading(false);
     }
@@ -99,24 +100,24 @@ export const NetworkConfig: React.FC = () => {
             </p>
           </div>
           <div>
-            <p className="text-sm font-body text-gray-medium mb-1">Attocore Host</p>
+            <p className="text-sm font-body text-gray-medium mb-1">Open5GS Host</p>
             <p className="text-xl font-body text-gray-dark">{data?.host || 'N/A'}</p>
           </div>
         </div>
       </Card>
 
-      {/* Data Network Names */}
+      {/* Access Point Names */}
       <Card
-        title="Data Network Names (DNNs)"
-        subtitle={`${data?.dnns.total || 0} DNN(s) configured`}
+        title="Access Point Names (APNs)"
+        subtitle={`${data?.apns.total || 0} APN(s) configured`}
       >
-        {data && data.dnns.total > 0 ? (
+        {data && data.apns.total > 0 ? (
           <Table
-            data={data.dnns.list}
+            data={data.apns.list}
             columns={[
               {
                 key: 'name',
-                header: 'DNN Name',
+                header: 'APN Name',
                 render: (value) => (
                   <span className="font-heading text-gray-charcoal">{value}</span>
                 ),
@@ -138,7 +139,7 @@ export const NetworkConfig: React.FC = () => {
             ]}
           />
         ) : (
-          <p className="text-center text-gray-medium font-body py-8">No DNNs configured</p>
+          <p className="text-center text-gray-medium font-body py-8">No APNs configured</p>
         )}
       </Card>
 
@@ -146,9 +147,8 @@ export const NetworkConfig: React.FC = () => {
       <Card title="Configuration Details" className="bg-gray-50">
         <div className="prose prose-sm max-w-none">
           <p className="text-gray-dark font-body">
-            This network configuration is read from the Attocore system and represents the current
-            operational parameters. Changes to network configuration must be made through the
-            Attocore CLI or web interface.
+            This network configuration is read from the Open5GS system and represents the current
+            operational parameters. The configuration is stored in YAML files and MongoDB.
           </p>
           <div className="mt-4 space-y-2">
             <p className="text-sm text-gray-medium font-body">
@@ -159,7 +159,10 @@ export const NetworkConfig: React.FC = () => {
               <strong>Bandwidth Units:</strong> Kbps (Kilobits per second)
             </p>
             <p className="text-sm text-gray-medium font-body">
-              <strong>Default DNN:</strong> video (1 Gbps downlink/uplink)
+              <strong>Default APN:</strong> internet (best-effort QoS)
+            </p>
+            <p className="text-sm text-gray-medium font-body">
+              <strong>UE IP Pool:</strong> 10.48.99.0/24
             </p>
           </div>
         </div>

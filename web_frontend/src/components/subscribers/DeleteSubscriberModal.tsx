@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { X, AlertTriangle } from 'lucide-react';
 import { Button } from '../ui';
 import { api } from '../../services/api';
-import type { Subscriber } from '../../types/attocore';
+import type { Subscriber } from '../../types/open5gs';
 
 interface DeleteSubscriberModalProps {
   isOpen: boolean;
@@ -32,10 +32,11 @@ export const DeleteSubscriberModal: React.FC<DeleteSubscriberModalProps> = ({
         onSuccess();
         onClose();
       } else {
-        setError(result.error || 'Failed to delete subscriber');
+        setError(result.error || 'Failed to delete device');
       }
-    } catch (err: any) {
-      setError(err.response?.data?.error || err.message || 'Failed to delete subscriber');
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { error?: string } }; message?: string };
+      setError(error.response?.data?.error || error.message || 'Failed to delete device');
     } finally {
       setLoading(false);
     }
@@ -47,7 +48,7 @@ export const DeleteSubscriberModal: React.FC<DeleteSubscriberModalProps> = ({
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-          <h3 className="text-xl font-heading text-gray-charcoal">Delete Subscriber</h3>
+          <h3 className="text-xl font-heading text-gray-charcoal">Delete Device</h3>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
             <X className="w-5 h-5" />
           </button>
@@ -64,7 +65,7 @@ export const DeleteSubscriberModal: React.FC<DeleteSubscriberModalProps> = ({
             <AlertTriangle className="w-6 h-6 text-red-500 flex-shrink-0 mt-0.5" />
             <div>
               <p className="font-body text-gray-dark">
-                Are you sure you want to delete this subscriber?
+                Are you sure you want to delete this device?
               </p>
               <div className="mt-3 bg-gray-50 rounded-lg p-3">
                 <p className="text-sm font-body text-gray-dark">
@@ -91,7 +92,7 @@ export const DeleteSubscriberModal: React.FC<DeleteSubscriberModalProps> = ({
               disabled={loading}
               className="flex-1 bg-red-600 hover:bg-red-700"
             >
-              {loading ? 'Deleting...' : 'Delete Subscriber'}
+              {loading ? 'Deleting...' : 'Delete Device'}
             </Button>
             <Button type="button" variant="secondary" onClick={onClose} disabled={loading}>
               Cancel

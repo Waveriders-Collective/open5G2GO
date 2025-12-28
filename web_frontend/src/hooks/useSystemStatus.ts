@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { api } from '../services/api';
-import type { SystemStatusResponse } from '../types/attocore';
+import type { SystemStatusResponse } from '../types/open5gs';
 
 export const useSystemStatus = () => {
   const [status, setStatus] = useState<SystemStatusResponse | null>(null);
@@ -22,10 +22,10 @@ export const useSystemStatus = () => {
     };
 
     fetchStatus();
-    
+
     // Poll every 30 seconds
     const interval = setInterval(fetchStatus, 30000);
-    
+
     return () => clearInterval(interval);
   }, []);
 

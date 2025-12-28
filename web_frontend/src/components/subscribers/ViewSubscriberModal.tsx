@@ -3,7 +3,7 @@ import { X } from 'lucide-react';
 import { Button } from '../ui';
 import { LoadingSpinner } from '../ui';
 import { api } from '../../services/api';
-import type { Subscriber, GetSubscriberResponse } from '../../types/attocore';
+import type { Subscriber, GetSubscriberResponse } from '../../types/open5gs';
 
 interface ViewSubscriberModalProps {
   isOpen: boolean;
@@ -40,10 +40,11 @@ export const ViewSubscriberModal: React.FC<ViewSubscriberModalProps> = ({
       if (result.success) {
         setDetails(result);
       } else {
-        setError(result.error || 'Failed to fetch subscriber details');
+        setError(result.error || 'Failed to fetch device details');
       }
-    } catch (err: any) {
-      setError(err.response?.data?.error || err.message || 'Failed to fetch subscriber details');
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { error?: string } }; message?: string };
+      setError(error.response?.data?.error || error.message || 'Failed to fetch device details');
     } finally {
       setLoading(false);
     }
@@ -55,7 +56,7 @@ export const ViewSubscriberModal: React.FC<ViewSubscriberModalProps> = ({
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg shadow-xl max-w-lg w-full mx-4 max-h-[80vh] overflow-hidden flex flex-col">
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-          <h3 className="text-xl font-heading text-gray-charcoal">Subscriber Details</h3>
+          <h3 className="text-xl font-heading text-gray-charcoal">Device Details</h3>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
             <X className="w-5 h-5" />
           </button>
@@ -91,8 +92,8 @@ export const ViewSubscriberModal: React.FC<ViewSubscriberModalProps> = ({
                     <p className="text-sm font-body font-mono text-gray-dark">{subscriber.ip}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-gray-medium font-body">Service/DNN</p>
-                    <p className="text-sm font-body text-gray-dark">{subscriber.service}</p>
+                    <p className="text-xs text-gray-medium font-body">APN</p>
+                    <p className="text-sm font-body text-gray-dark">{subscriber.apn}</p>
                   </div>
                 </div>
               </div>
@@ -100,7 +101,7 @@ export const ViewSubscriberModal: React.FC<ViewSubscriberModalProps> = ({
               {/* Extended Details from API */}
               {details?.data && (
                 <div className="bg-gray-50 rounded-lg p-4">
-                  <h4 className="text-sm font-semibold text-gray-dark mb-3">Extended Configuration</h4>
+                  <h4 className="text-sm font-semibold text-gray-dark mb-3">Open5GS Configuration</h4>
                   <pre className="text-xs font-mono text-gray-dark bg-white p-3 rounded border overflow-x-auto">
                     {JSON.stringify(details.data, null, 2)}
                   </pre>

@@ -3,7 +3,7 @@ import { UserPlus, RefreshCw, Pencil, Trash2, Eye } from 'lucide-react';
 import { Button, Card, Table, LoadingSpinner, Badge } from '../components/ui';
 import { AddSubscriberModal, EditSubscriberModal, DeleteSubscriberModal, ViewSubscriberModal } from '../components/subscribers';
 import { api } from '../services/api';
-import type { ListSubscribersResponse, Subscriber } from '../types/attocore';
+import type { ListSubscribersResponse, Subscriber } from '../types/open5gs';
 
 export const Subscribers: React.FC = () => {
   const [data, setData] = useState<ListSubscribersResponse | null>(null);
@@ -22,8 +22,9 @@ export const Subscribers: React.FC = () => {
       setError(null);
       const result = await api.listSubscribers();
       setData(result);
-    } catch (err: any) {
-      setError(err.response?.data?.error || err.message || 'Failed to load subscribers');
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { error?: string } }; message?: string };
+      setError(error.response?.data?.error || error.message || 'Failed to load devices');
     } finally {
       setLoading(false);
     }
@@ -58,7 +59,7 @@ export const Subscribers: React.FC = () => {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-3xl font-heading text-gray-charcoal">Subscribers</h2>
+        <h2 className="text-3xl font-heading text-gray-charcoal">Devices</h2>
         <div className="flex space-x-3">
           <Button
             variant="secondary"
@@ -77,7 +78,7 @@ export const Subscribers: React.FC = () => {
             className="flex items-center space-x-2"
           >
             <UserPlus className="w-4 h-4" />
-            <span>Add Subscriber</span>
+            <span>Add Device</span>
           </Button>
         </div>
       </div>
@@ -98,7 +99,7 @@ export const Subscribers: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Card className="bg-primary-light/20">
               <div className="text-center">
-                <p className="text-sm font-body text-gray-medium">Total Subscribers</p>
+                <p className="text-sm font-body text-gray-medium">Total Devices</p>
                 <p className="text-3xl font-heading text-gray-charcoal mt-2">{data?.total || 0}</p>
               </div>
             </Card>
@@ -137,16 +138,16 @@ export const Subscribers: React.FC = () => {
                   { key: 'imsi', header: 'IMSI' },
                   { key: 'ip', header: 'Static IP' },
                   {
-                    key: 'service',
-                    header: 'Service',
+                    key: 'apn',
+                    header: 'APN',
                     render: (value) => (
-                      <Badge variant="info">{value.toUpperCase()}</Badge>
+                      <Badge variant="info">{(value || 'internet').toUpperCase()}</Badge>
                     ),
                   },
                   {
                     key: 'actions',
                     header: 'Actions',
-                    render: (_: any, row: Subscriber) => (
+                    render: (_: unknown, row: Subscriber) => (
                       <div className="flex space-x-2">
                         <button
                           onClick={() => handleView(row)}
@@ -158,14 +159,14 @@ export const Subscribers: React.FC = () => {
                         <button
                           onClick={() => handleEdit(row)}
                           className="p-1 text-gray-500 hover:text-primary"
-                          title="Edit subscriber"
+                          title="Edit device"
                         >
                           <Pencil className="w-4 h-4" />
                         </button>
                         <button
                           onClick={() => handleDelete(row)}
                           className="p-1 text-gray-500 hover:text-red-600"
-                          title="Delete subscriber"
+                          title="Delete device"
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -176,7 +177,7 @@ export const Subscribers: React.FC = () => {
               />
             ) : (
               <p className="text-center text-gray-medium font-body py-8">
-                {searchTerm ? 'No subscribers match your search' : 'No subscribers provisioned'}
+                {searchTerm ? 'No devices match your search' : 'No devices provisioned'}
               </p>
             )}
           </Card>

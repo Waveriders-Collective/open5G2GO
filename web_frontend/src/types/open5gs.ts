@@ -1,18 +1,19 @@
 /**
- * TypeScript types for Attocore API responses
+ * TypeScript types for Open5GS API responses
  *
  * These match the Pydantic models from the FastAPI backend
+ * Updated for Open5GS 4G EPC (eNodeB, not gNodeB)
  */
 
 // Common types
 export interface Subscriber {
   imsi: string;
   name: string;
-  service: string;
+  apn: string;  // APN (4G terminology, was "service")
   ip: string;
 }
 
-export interface GNodeB {
+export interface ENodeB {
   id: string;
   ip: string;
   name: string;
@@ -24,11 +25,11 @@ export interface Connection {
   cm_state: string;
   rm_state: string;
   ip?: string;
-  dnn?: string;
+  apn?: string;  // APN instead of dnn for 4G
   session_id?: string;
 }
 
-export interface DNN {
+export interface APN {
   name: string;
   downlink_kbps: string;
   uplink_kbps: string;
@@ -51,14 +52,14 @@ export interface SystemStatusResponse {
     registered: number;
     connected: number;
   };
-  gnodebs: {
+  enodebs: {
     total: number;
-    list: GNodeB[];
+    list: ENodeB[];
   };
   health: {
     core_operational: boolean;
     has_active_connections: boolean;
-    gnodebs_connected: boolean;
+    enodebs_connected: boolean;
     operational_status: 'fully_operational' | 'core_and_network_ready' | 'core_ready';
   };
 }
@@ -80,19 +81,17 @@ export interface NetworkConfigResponse {
     network_name: string;
     tac: string;
   };
-  dnns: {
+  apns: {
     total: number;
-    list: DNN[];
+    list: APN[];
   };
 }
 
+// Simplified Add Subscriber for Open5GS with 4-digit IMSI entry
 export interface AddSubscriberRequest {
-  device_number: number;
-  name_prefix: string;
-  dnn: string;
-  ip_mode: 'old' | 'new';
-  host?: string;
-  imsi: string; // Required IMSI (15 digits)
+  device_number: string;  // Last 4 digits of IMSI (e.g., "0001")
+  name: string;           // Device name (e.g., "CAM-01")
+  ip?: string;            // Optional static IP from 10.48.99.x pool
 }
 
 export interface AddSubscriberResponse {
@@ -102,7 +101,7 @@ export interface AddSubscriberResponse {
     imsi: string;
     name: string;
     ip: string;
-    dnn: string;
+    apn: string;
   };
   error?: string;
 }
@@ -122,9 +121,7 @@ export interface ErrorResponse {
 // Subscriber editing types
 export interface UpdateSubscriberRequest {
   ip?: string;
-  dnn?: string;
   name?: string;
-  host?: string;
 }
 
 export interface GetSubscriberResponse {
@@ -133,8 +130,9 @@ export interface GetSubscriberResponse {
   host: string;
   timestamp: string;
   data?: {
-    operatorSpecificData?: Record<string, any>;
-    provisionedDataByPlmn?: Record<string, any>;
+    security?: Record<string, unknown>;
+    slice?: Record<string, unknown>[];
+    ambr?: Record<string, unknown>;
   };
   error?: string;
 }

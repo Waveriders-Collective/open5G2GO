@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 import { Button } from '../ui';
 import { api } from '../../services/api';
-import type { Subscriber, UpdateSubscriberRequest } from '../../types/attocore';
+import type { Subscriber, UpdateSubscriberRequest } from '../../types/open5gs';
 
 interface EditSubscriberModalProps {
   isOpen: boolean;
@@ -48,17 +48,18 @@ export const EditSubscriberModal: React.FC<EditSubscriberModalProps> = ({
     try {
       const result = await api.updateSubscriber(subscriber.imsi, formData);
       if (result.success) {
-        setSuccess(result.message || 'Subscriber updated successfully');
+        setSuccess(result.message || 'Device updated successfully');
         setTimeout(() => {
           onSuccess();
           onClose();
           setSuccess(null);
         }, 1500);
       } else {
-        setError(result.error || 'Failed to update subscriber');
+        setError(result.error || 'Failed to update device');
       }
-    } catch (err: any) {
-      setError(err.response?.data?.error || err.message || 'Failed to update subscriber');
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { error?: string } }; message?: string };
+      setError(error.response?.data?.error || error.message || 'Failed to update device');
     } finally {
       setLoading(false);
     }
@@ -70,7 +71,7 @@ export const EditSubscriberModal: React.FC<EditSubscriberModalProps> = ({
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-          <h3 className="text-xl font-heading text-gray-charcoal">Edit Subscriber</h3>
+          <h3 className="text-xl font-heading text-gray-charcoal">Edit Device</h3>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
             <X className="w-5 h-5" />
           </button>
@@ -121,7 +122,7 @@ export const EditSubscriberModal: React.FC<EditSubscriberModalProps> = ({
               type="text"
               value={formData.ip || ''}
               onChange={(e) => setFormData({ ...formData, ip: e.target.value })}
-              placeholder="e.g., 10.48.100.11"
+              placeholder="e.g., 10.48.99.10"
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary font-body font-mono"
             />
           </div>
