@@ -46,4 +46,8 @@ smf:
   # MTU for UE traffic
   mtu: 1400
 
+  # Disable online charging (Gy interface) - not needed for homelab
+  ctf:
+    enabled: no
+
   # Note: No SBI config = 4G-only mode (no NRF registration)
