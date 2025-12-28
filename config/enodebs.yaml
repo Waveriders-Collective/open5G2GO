@@ -1,0 +1,68 @@
+# =============================================================================
+# eNodeB Configuration for Open5G2GO
+# =============================================================================
+#
+# This file defines the Baicells eNodeBs in your deployment and their
+# Google SAS registration details for CBRS spectrum authorization.
+#
+# Serial numbers and FCC IDs must match your Google SAS Portal registrations.
+# See: https://sas.google.com/ for your Spectrum Access System portal
+#
+# Configuration is read at startup. Restart the backend service after changes.
+#
+
+# Google SAS customer/organization identifier
+# Format: customers/{customer-id}
+sas_customer_id: "customers/rollinson-co-sas"
+
+# Grant history retention (stored in MongoDB for UI display)
+grant_history_hours: 24
+
+# Poll interval for SAS status updates (seconds)
+# Google SAS has rate limits, so keep this reasonable (60-300 seconds)
+sas_poll_interval_seconds: 120
+
+# =============================================================================
+# eNodeB Definitions
+# =============================================================================
+# Each eNodeB entry requires:
+#   - serial_number: Manufacturer serial (must match SAS Portal)
+#   - fcc_id: FCC equipment authorization ID
+#   - name: Friendly display name for the UI
+#   - location: Physical location description
+#
+# Optional fields:
+#   - enabled: Set to false to skip this eNodeB in status checks
+#
+
+enodebs:
+  # Example Baicells Nova 436H eNodeB
+  - serial_number: "2009CW5000123"
+    fcc_id: "P27-NOVA436H"
+    name: "eNodeB-01"
+    location: "Main Building - Ceiling Mount"
+    enabled: true
+
+  # Add more eNodeBs as needed:
+  # - serial_number: "2009CW5000456"
+  #   fcc_id: "P27-NOVA436H"
+  #   name: "eNodeB-02"
+  #   location: "Warehouse"
+  #   enabled: true
+
+# =============================================================================
+# Notes
+# =============================================================================
+#
+# Baicells FCC IDs for common models:
+#   - Nova 436H (Cat B): P27-NOVA436H
+#   - Nova 436Q (Cat A): P27-NOVA436Q
+#   - Neutrino 430 (Cat A): P27-NEUTRINO430
+#
+# To find your serial numbers:
+#   1. Check the label on the eNodeB hardware
+#   2. Log into the eNodeB web interface (Status page)
+#   3. Check your Google SAS Portal device list
+#
+# Google SAS Portal: https://sas.google.com/
+# Baicells CloudCore: https://cloudcore.baicells.com/

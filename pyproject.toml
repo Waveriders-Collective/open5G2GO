@@ -21,6 +21,7 @@ pyyaml = "^6.0.1"
 python-multipart = "^0.0.6"
 httpx = "^0.25.0"
 mcp = "^1.0.0"
+google-auth = "^2.25.0"  # For Google SAS API authentication
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.4.3"

@@ -219,8 +219,13 @@ services:
       - MONGODB_URI=mongodb://mongodb:27017/open5gs
       - DEBUG=false
       - APP_NAME=Open5G2GO API
+      # Google SAS API Configuration (optional - for CBRS grant monitoring)
+      # Set GOOGLE_APPLICATION_CREDENTIALS to service account JSON path
+      - GOOGLE_APPLICATION_CREDENTIALS=/app/config/sas-service-account.json
+      - ENODEB_CONFIG_PATH=/app/config/enodebs.yaml
     volumes:
       - open5gs_logs:/var/log/open5gs:ro  # Read-only access for log parsing
+      - ./config:/app/config:ro           # eNodeB config and SAS credentials
     networks:
       open5g2go:
         ipv4_address: 172.26.0.20
