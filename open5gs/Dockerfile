@@ -21,10 +21,19 @@ RUN apt-get update && \
     iptables \
     iputils-ping \
     net-tools \
+    && curl -fsSL https://www.mongodb.org/static/pgp/server-6.0.asc | gpg -o /usr/share/keyrings/mongodb-server-6.0.gpg --dearmor \
+    && echo "deb [ arch=amd64,arm64 signed-by=/usr/share/keyrings/mongodb-server-6.0.gpg ] https://repo.mongodb.org/apt/ubuntu jammy/mongodb-org/6.0 multiverse" > /etc/apt/sources.list.d/mongodb-org-6.0.list \
     && add-apt-repository ppa:open5gs/latest \
     && apt-get update \
     && apt-get install -y --no-install-recommends \
-    open5gs \
+    mongodb-org-shell \
+    open5gs-common \
+    open5gs-hss \
+    open5gs-mme \
+    open5gs-sgwc \
+    open5gs-sgwu \
+    open5gs-smf \
+    open5gs-upf \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
