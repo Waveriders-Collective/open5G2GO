@@ -18,9 +18,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY pyproject.toml poetry.lock* ./
 
 # Install pip and dependencies
+# Note: poetry lock regenerates lock file if pyproject.toml changed
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir poetry && \
     poetry config virtualenvs.create false && \
+    poetry lock && \
     poetry install --only main --no-interaction --no-ansi
 
 # Copy application code
