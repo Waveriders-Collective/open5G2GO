@@ -3,13 +3,28 @@
 # =============================================================================
 #
 # This file defines the Baicells eNodeBs in your deployment and their
-# Google SAS registration details for CBRS spectrum authorization.
-#
-# Serial numbers and FCC IDs must match your Google SAS Portal registrations.
-# See: https://sas.google.com/ for your Spectrum Access System portal
+# monitoring configuration for SNMP and (optionally) SAS status.
 #
 # Configuration is read at startup. Restart the backend service after changes.
 #
+
+# =============================================================================
+# SNMP Settings
+# =============================================================================
+# SNMP v2c monitoring for Baicells eNodeBs
+# Note: eNodeB must have SNMP enabled and allow queries from the docker host IP
+
+snmp:
+  enabled: true
+  community: "public"
+  timeout_seconds: 5
+  poll_interval_seconds: 30
+
+# =============================================================================
+# Google SAS Settings (Optional)
+# =============================================================================
+# Google SAS Portal API requires invitation-only access (issue #1)
+# Leave sas_customer_id empty to disable SAS integration
 
 # Google SAS customer/organization identifier
 # Format: customers/{customer-id}
@@ -26,10 +41,15 @@ sas_poll_interval_seconds: 120
 # eNodeB Definitions
 # =============================================================================
 # Each eNodeB entry requires:
-#   - serial_number: Manufacturer serial (must match SAS Portal)
-#   - fcc_id: FCC equipment authorization ID
+#   - serial_number: Manufacturer serial (must match SAS Portal if used)
 #   - name: Friendly display name for the UI
 #   - location: Physical location description
+#
+# For SNMP monitoring (recommended):
+#   - ip_address: Management IP address of the eNodeB
+#
+# For SAS integration (optional - requires invitation-only API access):
+#   - fcc_id: FCC equipment authorization ID
 #
 # Optional fields:
 #   - enabled: Set to false to skip this eNodeB in status checks
@@ -38,6 +58,7 @@ sas_poll_interval_seconds: 120
 enodebs:
   # Baicells Nova 430i for Open5G2GO test deployment
   - serial_number: "120200046421CKY0606"
+    ip_address: "10.48.0.159"  # Management IP for SNMP queries
     fcc_id: "P27-NOVA430I"
     name: "Nova-430i-Test"
     location: "Test Lab"

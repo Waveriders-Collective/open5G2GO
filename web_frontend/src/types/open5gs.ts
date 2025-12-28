@@ -172,12 +172,73 @@ export interface ENodeBStatus {
   grants: GrantInfo[];
 }
 
+// SNMP monitoring status for Baicells eNodeBs
+export interface SNMPEnodebStatus {
+  serial_number: string;
+  config_name: string;
+  location: string;
+  reachable: boolean;
+  error?: string;
+  timestamp?: string;
+  ip_address: string;
+  identity: {
+    serial_number?: string;
+    product_type?: string;
+    hardware_version?: string;
+    software_version?: string;
+    enodeb_name?: string;
+    mac_address?: string;
+  };
+  cell: {
+    status?: string;
+    band_class?: number;
+    bandwidth?: string;
+    earfcn?: number;
+    pci?: number;
+    cell_id?: number;
+    tac?: number;
+  };
+  connection: {
+    s1_link_up: boolean;
+    rf_enabled: boolean;
+    ue_count: number;
+  };
+  performance: {
+    ul_throughput_kbps?: number;
+    dl_throughput_kbps?: number;
+    ul_prb_pct?: number;
+    dl_prb_pct?: number;
+    cpu_utilization?: number;
+  };
+  kpis: {
+    erab_success_pct?: number;
+    rrc_success_pct?: number;
+  };
+  alarms: {
+    count: number;
+    sctp_failure: boolean;
+    cell_unavailable: boolean;
+  };
+  tx_power: {
+    current_dbm?: number;
+    min_dbm?: number;
+    max_dbm?: number;
+  };
+}
+
 export interface EnodebStatusResponse {
   timestamp: string;
   s1ap: {
     available: boolean;
     connected_count: number;
     enodebs: ENodeBStatus[];
+  };
+  snmp?: {
+    available: boolean;
+    enabled: boolean;
+    reachable_count: number;
+    configured_count: number;
+    enodebs: SNMPEnodebStatus[];
   };
   sas: {
     available: boolean;

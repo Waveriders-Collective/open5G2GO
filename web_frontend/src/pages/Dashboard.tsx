@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { Users, Activity, Radio, Server, RefreshCw, ChevronDown, ChevronUp } from 'lucide-react';
+import { Users, Activity, Radio, Server, RefreshCw, ChevronDown, ChevronUp, Wifi, WifiOff, AlertTriangle, Cpu, Signal } from 'lucide-react';
 import { StatCard, Card, Badge, Table, LoadingSpinner } from '../components/ui';
 import { api } from '../services/api';
-import type { SystemStatusResponse, ActiveConnectionsResponse, EnodebStatusResponse, ENodeBStatus } from '../types/open5gs';
+import type { SystemStatusResponse, ActiveConnectionsResponse, EnodebStatusResponse, ENodeBStatus, SNMPEnodebStatus } from '../types/open5gs';
 
 export const Dashboard: React.FC = () => {
   const [status, setStatus] = useState<SystemStatusResponse | null>(null);
@@ -118,6 +118,21 @@ export const Dashboard: React.FC = () => {
     });
 
     return Array.from(merged.values());
+  };
+
+  // Get SNMP data for an eNodeB by serial number or IP
+  const getSNMPStatus = (serial: string, ip?: string): SNMPEnodebStatus | undefined => {
+    if (!enodebStatus?.snmp?.enodebs) return undefined;
+    return enodebStatus.snmp.enodebs.find(
+      e => e.serial_number === serial || e.ip_address === ip
+    );
+  };
+
+  // Format throughput for display
+  const formatThroughput = (kbps?: number): string => {
+    if (kbps === undefined || kbps === null) return 'N/A';
+    if (kbps >= 1000) return `${(kbps / 1000).toFixed(1)} Mbps`;
+    return `${kbps} kbps`;
   };
 
   const isEnodebConnected = (serial: string): boolean => {
@@ -266,6 +281,26 @@ export const Dashboard: React.FC = () => {
                         <Badge variant={isConnected ? 'success' : 'error'}>
                           {isConnected ? 'Connected' : 'Disconnected'}
                         </Badge>
+                        {/* SNMP reachability indicator */}
+                        {(() => {
+                          const snmpData = getSNMPStatus(enb.serial_number, enb.ip_address);
+                          if (snmpData) {
+                            return (
+                              <Badge variant={snmpData.reachable ? 'success' : 'warning'}>
+                                {snmpData.reachable ? (
+                                  <span className="flex items-center gap-1">
+                                    <Wifi className="w-3 h-3" /> SNMP
+                                  </span>
+                                ) : (
+                                  <span className="flex items-center gap-1">
+                                    <WifiOff className="w-3 h-3" /> SNMP
+                                  </span>
+                                )}
+                              </Badge>
+                            );
+                          }
+                          return null;
+                        })()}
                       </div>
                       <p className="text-sm text-gray-medium font-body mt-1">
                         {enb.location || 'Location not set'} | S/N: {enb.serial_number}
@@ -297,6 +332,93 @@ export const Dashboard: React.FC = () => {
                           )}
                         </div>
                       )}
+                      {/* SNMP Monitoring Data */}
+                      {(() => {
+                        const snmpData = getSNMPStatus(enb.serial_number, enb.ip_address);
+                        if (snmpData?.reachable) {
+                          return (
+                            <div className="mt-3 p-3 bg-white rounded border border-gray-100">
+                              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs font-body">
+                                {/* Cell Info */}
+                                <div>
+                                  <p className="text-gray-medium mb-1">Cell Status</p>
+                                  <div className="flex items-center gap-2">
+                                    <Badge variant={snmpData.connection.rf_enabled ? 'success' : 'error'}>
+                                      RF {snmpData.connection.rf_enabled ? 'ON' : 'OFF'}
+                                    </Badge>
+                                    <Badge variant={snmpData.connection.s1_link_up ? 'success' : 'error'}>
+                                      S1 {snmpData.connection.s1_link_up ? 'UP' : 'DOWN'}
+                                    </Badge>
+                                  </div>
+                                  {snmpData.cell.bandwidth && (
+                                    <p className="text-gray-dark mt-1">
+                                      Band {snmpData.cell.band_class} | {snmpData.cell.bandwidth}
+                                    </p>
+                                  )}
+                                </div>
+                                {/* UE Count & Throughput */}
+                                <div>
+                                  <p className="text-gray-medium mb-1">Traffic</p>
+                                  <p className="text-gray-dark flex items-center gap-1">
+                                    <Users className="w-3 h-3" />
+                                    {snmpData.connection.ue_count} UE(s)
+                                  </p>
+                                  <p className="text-gray-dark">
+                                    ↓ {formatThroughput(snmpData.performance.dl_throughput_kbps)} |
+                                    ↑ {formatThroughput(snmpData.performance.ul_throughput_kbps)}
+                                  </p>
+                                </div>
+                                {/* TX Power */}
+                                <div>
+                                  <p className="text-gray-medium mb-1">TX Power</p>
+                                  <p className="text-gray-dark flex items-center gap-1">
+                                    <Signal className="w-3 h-3" />
+                                    {snmpData.tx_power.current_dbm ?? 'N/A'} dBm
+                                  </p>
+                                  {snmpData.tx_power.max_dbm && (
+                                    <p className="text-gray-medium">
+                                      Max: {snmpData.tx_power.max_dbm} dBm
+                                    </p>
+                                  )}
+                                </div>
+                                {/* Alarms */}
+                                <div>
+                                  <p className="text-gray-medium mb-1">Health</p>
+                                  <div className="flex items-center gap-2">
+                                    {snmpData.alarms.count === 0 ? (
+                                      <Badge variant="success">No Alarms</Badge>
+                                    ) : (
+                                      <Badge variant="error">
+                                        <AlertTriangle className="w-3 h-3 mr-1" />
+                                        {snmpData.alarms.count} Alarm(s)
+                                      </Badge>
+                                    )}
+                                  </div>
+                                  {snmpData.performance.cpu_utilization !== undefined && (
+                                    <p className="text-gray-dark flex items-center gap-1 mt-1">
+                                      <Cpu className="w-3 h-3" />
+                                      CPU: {snmpData.performance.cpu_utilization}%
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+                              {/* Device Info Row */}
+                              <div className="mt-2 pt-2 border-t border-gray-100 text-xs text-gray-medium">
+                                {snmpData.identity.product_type} |
+                                HW: {snmpData.identity.hardware_version} |
+                                SW: {snmpData.identity.software_version}
+                              </div>
+                            </div>
+                          );
+                        } else if (snmpData?.error) {
+                          return (
+                            <div className="mt-2 p-2 bg-amber-50 border border-amber-200 rounded text-xs text-amber-800">
+                              SNMP: {snmpData.error}
+                            </div>
+                          );
+                        }
+                        return null;
+                      })()}
                     </div>
 
                     <div className="flex items-center gap-4">

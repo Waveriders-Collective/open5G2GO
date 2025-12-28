@@ -12,6 +12,7 @@ from typing import Dict, Any, Optional, List
 from opensurfcontrol.mongodb_client import Open5GSClient, get_client
 from opensurfcontrol.mme_client import get_mme_parser
 from opensurfcontrol.sas_client import get_sas_client, load_enodeb_config
+from opensurfcontrol.snmp_client import get_snmp_client
 from opensurfcontrol.constants import (
     IMSI_PREFIX,
     DEFAULT_APN,
@@ -368,15 +369,16 @@ class Open5GSService:
 
     async def get_enodeb_status(self) -> Dict[str, Any]:
         """
-        Get combined eNodeB status from S1AP connections and SAS.
+        Get combined eNodeB status from S1AP connections, SNMP, and SAS.
 
         Combines:
         - S1AP connection status from MME log parsing
+        - SNMP monitoring data from Baicells eNodeBs (if configured)
         - eNodeB configuration from enodebs.yaml
         - SAS registration/grant status from Google SAS Portal (if configured)
 
         Returns:
-            EnodebStatusResponse with s1ap and sas status.
+            EnodebStatusResponse with s1ap, snmp, and sas status.
         """
         try:
             # Get S1AP connection status from MME logs
@@ -390,6 +392,23 @@ class Open5GSService:
             # Load eNodeB configuration
             config = load_enodeb_config()
             configured_enodebs = config.get("enodebs", [])
+            snmp_config = config.get("snmp", {})
+            snmp_enabled = snmp_config.get("enabled", False)
+
+            # Get SNMP status if enabled
+            snmp_client = get_snmp_client(community=snmp_config.get("community", "public"))
+            snmp_available = snmp_enabled and snmp_client.is_available()
+            snmp_statuses = {}
+
+            if snmp_available:
+                # Query SNMP for each eNodeB with an IP address
+                ip_addresses = [
+                    e.get("ip_address")
+                    for e in configured_enodebs
+                    if e.get("enabled", True) and e.get("ip_address")
+                ]
+                if ip_addresses:
+                    snmp_statuses = await snmp_client.get_status_multiple(ip_addresses)
 
             # Get SAS status
             sas_client = get_sas_client()
@@ -403,19 +422,27 @@ class Open5GSService:
                     continue
 
                 serial = enb_config.get("serial_number", "")
+                config_ip = enb_config.get("ip_address", "")
 
-                # For single eNodeB deployments, assume any connection matches
-                # In multi-eNodeB setups, we'd need IP-to-serial mapping in config
-                is_connected = len(connected_ips) > 0
+                # Check if connected via S1AP
+                is_connected = config_ip in connected_ips or (
+                    len(connected_ips) > 0 and len(configured_enodebs) == 1
+                )
 
-                # Find matching S1AP connection to get IP
-                enb_ip = None
+                # Find matching S1AP connection to get connection details
+                enb_ip = config_ip
                 connected_at = None
-                if s1ap_connections:
-                    # Use first connection for single-eNodeB setup
-                    first_conn = s1ap_connections[0]
-                    enb_ip = first_conn.get("ip")
-                    connected_at = first_conn.get("connected_at")
+                port = None
+                sctp_streams = None
+
+                for conn in s1ap_connections:
+                    conn_ip = conn.get("ip")
+                    if conn_ip == config_ip or (len(configured_enodebs) == 1):
+                        enb_ip = conn_ip or config_ip
+                        connected_at = conn.get("connected_at")
+                        port = conn.get("port", 36412)
+                        sctp_streams = conn.get("sctp_streams")
+                        break
 
                 s1ap_enodebs.append({
                     "serial_number": serial,
@@ -424,10 +451,32 @@ class Open5GSService:
                     "config_name": enb_config.get("name", f"eNodeB-{serial[-4:]}"),
                     "location": enb_config.get("location", ""),
                     "ip_address": enb_ip,
+                    "port": port,
+                    "sctp_streams": sctp_streams,
                     "connected": is_connected,
                     "connected_at": connected_at,
                     "grants": [],
                 })
+
+            # Build SNMP eNodeB list
+            snmp_enodebs = []
+            for enb_config in configured_enodebs:
+                if not enb_config.get("enabled", True):
+                    continue
+
+                config_ip = enb_config.get("ip_address", "")
+                serial = enb_config.get("serial_number", "")
+
+                if config_ip and config_ip in snmp_statuses:
+                    snmp_status = snmp_statuses[config_ip]
+                    snmp_enodebs.append({
+                        "serial_number": snmp_status.serial_number or serial,
+                        "config_name": enb_config.get("name", f"eNodeB-{serial[-4:]}"),
+                        "location": enb_config.get("location", ""),
+                        "reachable": snmp_status.reachable,
+                        "error": snmp_status.error,
+                        **snmp_status.to_dict(),
+                    })
 
             # Build SAS eNodeB list
             sas_enodebs = []
@@ -458,6 +507,11 @@ class Open5GSService:
                 1 for s in sas_statuses if s.get("active_grant") is not None
             )
 
+            # Count SNMP reachable
+            snmp_reachable_count = sum(
+                1 for s in snmp_statuses.values() if s.reachable
+            )
+
             return {
                 "timestamp": self._timestamp(),
                 "s1ap": {
@@ -465,6 +519,13 @@ class Open5GSService:
                     "connected_count": len(s1ap_connections),
                     "enodebs": s1ap_enodebs,
                     "raw_connections": s1ap_connections,  # Include raw data for debugging
+                },
+                "snmp": {
+                    "available": snmp_available,
+                    "enabled": snmp_enabled,
+                    "reachable_count": snmp_reachable_count,
+                    "configured_count": len([e for e in configured_enodebs if e.get("ip_address")]),
+                    "enodebs": snmp_enodebs,
                 },
                 "sas": {
                     "available": sas_available,
@@ -489,6 +550,13 @@ class Open5GSService:
                 "s1ap": {
                     "available": False,
                     "connected_count": 0,
+                    "enodebs": [],
+                },
+                "snmp": {
+                    "available": False,
+                    "enabled": False,
+                    "reachable_count": 0,
+                    "configured_count": 0,
                     "enodebs": [],
                 },
                 "sas": {
