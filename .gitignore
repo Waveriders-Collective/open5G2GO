@@ -39,3 +39,9 @@ htmlcov/
 
 # Logs
 *.log
+
+# Credentials
+config/sas-service-account.json
+
+# Local docs
+docs/LESSONS_LEARNED.md
