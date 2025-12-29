@@ -54,7 +54,7 @@ export const Header: React.FC = () => {
           title={getStatusTitle()}
         >
           <span className="text-sm font-body text-gray-400">
-            {loading ? 'Loading...' : status?.system_name || 'Open5GS'}: {loading ? 'Loading...' : status?.host || 'localhost'}
+            {loading ? 'Loading...' : status?.system_name || 'Open5GS'}
           </span>
           <div
             className={`w-2 h-2 rounded-full ${getStatusColor()} ${status?.health.core_operational ? 'animate-pulse' : ''}`}
