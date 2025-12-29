@@ -237,8 +237,10 @@ class Open5GSClient:
                 }
             },
             "ambr": {
-                "uplink": {"value": ambr_ul // 1000, "unit": 0},
-                "downlink": {"value": ambr_dl // 1000, "unit": 0}
+                # Unit: 0=bps, 1=Kbps, 2=Mbps, 3=Gbps, 4=Tbps
+                # Input is in bps, convert to Mbps (unit 2) for cleaner values
+                "uplink": {"value": ambr_ul // 1000000, "unit": 2},
+                "downlink": {"value": ambr_dl // 1000000, "unit": 2}
             },
             "pcc_rule": []
         }
@@ -272,8 +274,9 @@ class Open5GSClient:
                 "opc": opc
             },
             "ambr": {
-                "uplink": {"value": ambr_ul // 1000, "unit": 0},
-                "downlink": {"value": ambr_dl // 1000, "unit": 0}
+                # Unit: 0=bps, 1=Kbps, 2=Mbps, 3=Gbps, 4=Tbps
+                "uplink": {"value": ambr_ul // 1000000, "unit": 2},
+                "downlink": {"value": ambr_dl // 1000000, "unit": 2}
             },
             "slice": [{
                 "sst": 1,
