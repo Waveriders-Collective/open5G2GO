@@ -258,6 +258,7 @@ services:
       - open5gs_logs:/var/log/open5gs:ro  # Read-only access for log parsing
       - ./config:/app/config:ro           # eNodeB config and SAS credentials
       - ./open5gs/config:/etc/open5gs:ro  # Open5GS config files for network config display
+      - /var/run/docker.sock:/var/run/docker.sock:ro  # Docker socket for service monitoring
     networks:
       open5g2go:
         ipv4_address: 172.26.0.20
