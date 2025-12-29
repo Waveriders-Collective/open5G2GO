@@ -418,15 +418,17 @@ class Open5GSService:
                 except Exception:
                     pass
 
+                # Map to frontend expected field names
+                state = session.get("state", "attached")
+                cm_state = "CONNECTED" if state == "attached" else "IDLE"
+
                 enriched_connections.append({
                     "imsi": imsi,
-                    "device_name": device_name or f"Device-{imsi[-4:]}",
-                    "ip_address": session.get("ip_address"),
+                    "name": device_name or f"Device-{imsi[-4:]}",
+                    "ip": session.get("ip_address"),
                     "apn": session.get("apn", "internet"),
-                    "state": session.get("state", "attached"),
+                    "cm_state": cm_state,
                     "attached_at": session.get("attached_at"),
-                    "enb_ue_s1ap_id": session.get("enb_ue_s1ap_id"),
-                    "mme_ue_s1ap_id": session.get("mme_ue_s1ap_id"),
                 })
 
             return {
