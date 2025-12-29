@@ -106,6 +106,40 @@ export const NetworkConfig: React.FC = () => {
         </div>
       </Card>
 
+      {/* eNodeB Configuration */}
+      {data?.enodeb_config && (
+        <Card
+          title="eNodeB Configuration"
+          subtitle="Use these settings when configuring your eNodeB"
+          className="bg-gradient-to-br from-green-50 to-emerald-50 border-green-200"
+        >
+          <Table
+            data={[
+              { setting: 'MME IP Address', value: data.enodeb_config.mme_ip },
+              { setting: 'MME Port', value: String(data.enodeb_config.mme_port) },
+              { setting: 'PLMN ID', value: data.enodeb_config.plmn_id },
+              { setting: 'TAC', value: String(data.enodeb_config.tac) },
+            ]}
+            columns={[
+              {
+                key: 'setting',
+                header: 'Setting',
+                render: (value) => (
+                  <span className="font-heading text-gray-charcoal">{value}</span>
+                ),
+              },
+              {
+                key: 'value',
+                header: 'Value',
+                render: (value) => (
+                  <span className="font-mono text-primary-deep font-semibold">{value}</span>
+                ),
+              },
+            ]}
+          />
+        </Card>
+      )}
+
       {/* Access Point Names */}
       <Card
         title="Access Point Names (APNs)"

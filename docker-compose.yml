@@ -248,6 +248,8 @@ services:
       - MONGODB_URI=mongodb://mongodb:27017/open5gs
       - DEBUG=false
       - APP_NAME=Open5G2GO API
+      # Host IP for eNodeB configuration display (Docker host IP that eNodeBs connect to)
+      - HOST_IP=${HOST_IP:-10.48.0.110}
       # Google SAS API Configuration (optional - for CBRS grant monitoring)
       # Set GOOGLE_APPLICATION_CREDENTIALS to service account JSON path
       - GOOGLE_APPLICATION_CREDENTIALS=/app/config/sas-service-account.json
@@ -255,6 +257,7 @@ services:
     volumes:
       - open5gs_logs:/var/log/open5gs:ro  # Read-only access for log parsing
       - ./config:/app/config:ro           # eNodeB config and SAS credentials
+      - ./open5gs/config:/etc/open5gs:ro  # Open5GS config files for network config display
     networks:
       open5g2go:
         ipv4_address: 172.26.0.20

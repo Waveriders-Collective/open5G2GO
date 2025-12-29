@@ -71,6 +71,13 @@ export interface ActiveConnectionsResponse {
   connections: Connection[];
 }
 
+export interface EnodebConfig {
+  mme_ip: string;
+  mme_port: number;
+  plmn_id: string;
+  tac: number;
+}
+
 export interface NetworkConfigResponse {
   host: string;
   timestamp: string;
@@ -81,6 +88,7 @@ export interface NetworkConfigResponse {
     network_name: string;
     tac: string;
   };
+  enodeb_config?: EnodebConfig;
   apns: {
     total: number;
     list: APN[];
