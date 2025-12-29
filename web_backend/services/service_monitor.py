@@ -117,7 +117,10 @@ class ServiceChecker:
                 try:
                     container = json.loads(line)
                     names = container.get("Names", "")
-                    if container_name in names:
+                    # Match container by suffix (e.g., "-mme", "-hss") to support
+                    # different prefixes like open5gs-mme or open5g2go-mme
+                    service_suffix = container_name.replace("open5gs", "")
+                    if container_name in names or names.endswith(service_suffix):
                         state = container.get("State", "unknown")
                         running = state == "running"
                         return {
