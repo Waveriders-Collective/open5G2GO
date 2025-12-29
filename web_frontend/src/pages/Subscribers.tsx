@@ -113,7 +113,7 @@ export const Subscribers: React.FC = () => {
             </Card>
             <Card className="bg-primary-light/20">
               <div className="text-center">
-                <p className="text-sm font-body text-gray-medium">Host</p>
+                <p className="text-sm font-body text-gray-medium">Mobile Network</p>
                 <p className="text-lg font-body text-gray-dark mt-2">{data?.host || 'N/A'}</p>
               </div>
             </Card>

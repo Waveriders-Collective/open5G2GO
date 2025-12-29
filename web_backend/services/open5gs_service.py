@@ -130,6 +130,14 @@ class Open5GSService:
         try:
             subscribers = self.client.list_subscribers()
 
+            # Get network name from MME config
+            network_name = NETWORK_NAME_SHORT
+            mme_config = load_open5gs_config("mme")
+            if mme_config:
+                mme = mme_config.get("mme", {})
+                network_name_cfg = mme.get("network_name", {})
+                network_name = network_name_cfg.get("full", NETWORK_NAME_SHORT)
+
             # Transform to API format
             subscriber_list = []
             for sub in subscribers:
@@ -143,6 +151,7 @@ class Open5GSService:
             return {
                 "timestamp": self._timestamp(),
                 "total": len(subscriber_list),
+                "host": network_name,
                 "subscribers": subscriber_list
             }
         except Exception as e:
@@ -168,9 +177,13 @@ class Open5GSService:
                     "error": f"Subscriber with IMSI {imsi} not found"
                 }
 
+            # Extract AMBR (bandwidth) settings
+            ambr = self._get_subscriber_ambr(subscriber)
+
             return {
                 "success": True,
                 "imsi": imsi,
+                "ambr": ambr,
                 "data": subscriber
             }
         except Exception as e:
@@ -722,6 +735,34 @@ class Open5GSService:
         except (KeyError, IndexError):
             pass
         return DEFAULT_APN
+
+    def _get_subscriber_ambr(self, subscriber: Dict[str, Any]) -> Dict[str, str]:
+        """Extract AMBR (bandwidth) from subscriber document."""
+        # Default values
+        uplink = f"{DEFAULT_AMBR_UL // 1000000} Mbps"
+        downlink = f"{DEFAULT_AMBR_DL // 1000000} Mbps"
+
+        try:
+            # Try to get from top-level ambr first
+            ambr = subscriber.get("ambr", {})
+            if ambr:
+                ul_data = ambr.get("uplink", {})
+                dl_data = ambr.get("downlink", {})
+                if ul_data and dl_data:
+                    # Unit: 0=bps, 1=Kbps, 2=Mbps, 3=Gbps
+                    ul_value = ul_data.get("value", DEFAULT_AMBR_UL // 1000000)
+                    dl_value = dl_data.get("value", DEFAULT_AMBR_DL // 1000000)
+                    unit = ul_data.get("unit", 2)
+                    unit_str = ["bps", "Kbps", "Mbps", "Gbps"][unit] if unit < 4 else "Mbps"
+                    uplink = f"{ul_value} {unit_str}"
+                    downlink = f"{dl_value} {unit_str}"
+        except (KeyError, IndexError, TypeError):
+            pass
+
+        return {
+            "uplink": uplink,
+            "downlink": downlink
+        }
 
     def _calculate_ip(self, device_number: int) -> str:
         """
