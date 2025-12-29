@@ -50,7 +50,8 @@ class ValidationError(Open5GSClientError):
 
 
 # Whitelist of fields that can be updated via update_subscriber
-ALLOWED_UPDATE_FIELDS = frozenset(['device_name', 'slice', 'ambr'])
+# NOTE: 4G EPC uses 'pdn' not 'slice' (slice is 5G SA only)
+ALLOWED_UPDATE_FIELDS = frozenset(['device_name', 'pdn', 'ambr'])
 
 
 def _validate_imsi(imsi: str) -> None:
@@ -221,12 +222,13 @@ class Open5GSClient:
         _validate_hex_key(k, "Authentication key (k)")
         _validate_hex_key(opc, "Operator key (opc)")
 
-        # Build session configuration
-        session_config: Dict[str, Any] = {
-            "name": apn,
-            "type": 3,  # IPv4
+        # Build PDN configuration for 4G EPC
+        # NOTE: 4G uses "pdn" array, NOT "slice" (which is 5G SA only)
+        pdn_config: Dict[str, Any] = {
+            "apn": apn,
+            "type": 1,  # 1=IPv4, 2=IPv6, 3=IPv4v6
             "qos": {
-                "index": DEFAULT_QCI,
+                "qci": DEFAULT_QCI,
                 "arp": {
                     "priority_level": DEFAULT_ARP_PRIORITY,
                     "pre_emption_capability": 1,
@@ -243,14 +245,14 @@ class Open5GSClient:
         if ip:
             # Check for duplicate IP address
             existing_with_ip = self.subscribers.find_one({
-                "slice.session.ue.addr": ip,
+                "pdn.ue.addr": ip,
                 "imsi": {"$ne": imsi}  # Exclude current subscriber (for updates)
             })
             if existing_with_ip:
                 raise SubscriberError(
                     f"IP address {ip} is already assigned to IMSI {existing_with_ip['imsi']}"
                 )
-            session_config["ue"] = {"addr": ip}
+            pdn_config["ue"] = {"addr": ip}
 
         subscriber = {
             "imsi": imsi,
@@ -264,11 +266,7 @@ class Open5GSClient:
                 "uplink": {"value": ambr_ul // 1000, "unit": 0},
                 "downlink": {"value": ambr_dl // 1000, "unit": 0}
             },
-            "slice": [{
-                "sst": 1,
-                "default_indicator": True,
-                "session": [session_config]
-            }]
+            "pdn": [pdn_config]
         }
 
         # Add device name as custom field if provided
