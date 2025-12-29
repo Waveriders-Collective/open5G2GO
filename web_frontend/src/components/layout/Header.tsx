@@ -1,5 +1,6 @@
 import React from 'react';
 import { Activity } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { useSystemStatus } from '../../hooks/useSystemStatus';
 
 export const Header: React.FC = () => {
@@ -47,15 +48,18 @@ export const Header: React.FC = () => {
             <p className="text-sm text-gray-400 font-body">Open5GS Management Console</p>
           </div>
         </div>
-        <div className="flex items-center space-x-4">
+        <Link
+          to="/services"
+          className="flex items-center space-x-4 cursor-pointer transition-opacity hover:opacity-80"
+          title={getStatusTitle()}
+        >
           <span className="text-sm font-body text-gray-400">
-            {loading ? 'Loading...' : status?.system_name || 'Open5GS'}: {loading ? 'Loading...' : status?.host || 'localhost'}
+            {loading ? 'Loading...' : status?.system_name || 'Open5GS'}
           </span>
           <div
             className={`w-2 h-2 rounded-full ${getStatusColor()} ${status?.health.core_operational ? 'animate-pulse' : ''}`}
-            title={getStatusTitle()}
           />
-        </div>
+        </Link>
       </div>
     </header>
   );

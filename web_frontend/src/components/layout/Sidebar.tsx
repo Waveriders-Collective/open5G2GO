@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Users, Network, Activity } from 'lucide-react';
+import { LayoutDashboard, Users, Network, Activity, Server } from 'lucide-react';
 
 interface NavItem {
   path: string;
@@ -12,6 +12,7 @@ const navItems: NavItem[] = [
   { path: '/', label: 'Dashboard', icon: <LayoutDashboard className="w-5 h-5" /> },
   { path: '/subscribers', label: 'Devices', icon: <Users className="w-5 h-5" /> },
   { path: '/network', label: 'Network Config', icon: <Network className="w-5 h-5" /> },
+  { path: '/services', label: 'Services', icon: <Server className="w-5 h-5" /> },
 ];
 
 export const Sidebar: React.FC = () => {

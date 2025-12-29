@@ -3,6 +3,7 @@ import { Layout } from './components/layout';
 import { Dashboard } from './pages/Dashboard';
 import { Subscribers } from './pages/Subscribers';
 import { NetworkConfig } from './pages/NetworkConfig';
+import { Services } from './pages/Services';
 
 function App() {
   return (
@@ -12,6 +13,7 @@ function App() {
           <Route path="/" element={<Dashboard />} />
           <Route path="/subscribers" element={<Subscribers />} />
           <Route path="/network" element={<NetworkConfig />} />
+          <Route path="/services" element={<Services />} />
         </Routes>
       </Layout>
     </BrowserRouter>

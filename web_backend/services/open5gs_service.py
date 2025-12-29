@@ -377,6 +377,19 @@ class Open5GSService:
             ue_count = mme_parser.get_ue_count()
             session_count = mme_parser.get_session_count()
 
+            # Determine operational status
+            has_enodebs = enb_count > 0
+            has_connections = session_count > 0
+
+            if health_ok and has_enodebs and has_connections:
+                operational_status = "fully_operational"
+            elif health_ok and has_enodebs:
+                operational_status = "core_and_network_ready"
+            elif health_ok:
+                operational_status = "core_ready"
+            else:
+                operational_status = "core_down"
+
             return {
                 "timestamp": self._timestamp(),
                 "system_name": "Open5G2GO",
@@ -392,8 +405,9 @@ class Open5GSService:
                 "health": {
                     "core_operational": health_ok,
                     "database_connected": status.get("connection") == "connected",
-                    "has_active_connections": session_count > 0,
-                    "enodebs_connected": enb_count > 0
+                    "has_active_connections": has_connections,
+                    "enodebs_connected": has_enodebs,
+                    "operational_status": operational_status
                 }
             }
         except Exception as e:

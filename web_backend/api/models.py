@@ -145,3 +145,27 @@ class NetworkConfigResponse(BaseModel):
     network_identity: dict = Field(..., description="Network identity (PLMN)")
     apns: dict = Field(..., description="APN configuration")
     ip_pool: dict = Field(..., description="UE IP pool configuration")
+
+
+# ============================================================================
+# Service Status Models
+# ============================================================================
+
+class ServiceStatus(BaseModel):
+    """Status of a single Open5GS service."""
+    name: str = Field(..., description="Service name (e.g., 'mme', 'amf')")
+    display_name: str = Field(..., description="Human-readable service name")
+    category: str = Field(..., description="Service category (4G EPC Core, 5G SA Core)")
+    status: str = Field(..., description="Service status: running, stopped, error, or unknown")
+    uptime: Optional[str] = Field(None, description="Service uptime")
+    last_checked: str = Field(..., description="ISO timestamp of last status check")
+    details: Optional[str] = Field(None, description="Additional details")
+
+
+class ServicesResponse(BaseModel):
+    """Response containing status of all Open5GS services."""
+    host: str = Field(..., description="Host name")
+    timestamp: str = Field(..., description="Response timestamp")
+    check_method: str = Field(..., description="Method used to check services: docker or process")
+    services: List[ServiceStatus] = Field(..., description="List of service statuses")
+    summary: dict = Field(..., description="Summary counts of service statuses")

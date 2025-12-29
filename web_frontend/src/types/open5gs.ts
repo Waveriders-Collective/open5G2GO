@@ -247,3 +247,30 @@ export interface EnodebStatusResponse {
     network_name: string;
   };
 }
+
+// Service Monitoring types
+export type ServiceStatus = 'running' | 'stopped' | 'error' | 'unknown';
+
+export interface ServiceInfo {
+  name: string;
+  display_name: string;
+  category: string;
+  status: ServiceStatus;
+  uptime: string | null;
+  last_checked: string;
+  details?: string;
+}
+
+export interface ServicesResponse {
+  host: string;
+  timestamp: string;
+  check_method: 'docker' | 'process';
+  services: ServiceInfo[];
+  summary: {
+    total: number;
+    running: number;
+    stopped: number;
+    error: number;
+    unknown: number;
+  };
+}
