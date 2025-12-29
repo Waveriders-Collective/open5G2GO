@@ -316,7 +316,7 @@ class Open5GSService:
 
     async def get_system_status(self) -> Dict[str, Any]:
         """
-        Get system status including eNodeB connections from MME logs.
+        Get system status including eNodeB connections and UE sessions from MME logs.
 
         Returns:
             System status information.
@@ -330,13 +330,17 @@ class Open5GSService:
             enodebs = mme_parser.get_connected_enodebs()
             enb_count = len(enodebs)
 
+            # Get UE session counts from MME logs
+            ue_count = mme_parser.get_ue_count()
+            session_count = mme_parser.get_session_count()
+
             return {
                 "timestamp": self._timestamp(),
                 "system_name": "Open5G2GO",
                 "subscribers": {
                     "provisioned": status.get("total_subscribers", 0),
-                    "registered": 0,  # Would need real-time tracking
-                    "connected": 0    # Would need real-time tracking
+                    "registered": ue_count,
+                    "connected": session_count
                 },
                 "enodebs": {
                     "total": enb_count,
@@ -345,7 +349,7 @@ class Open5GSService:
                 "health": {
                     "core_operational": health_ok,
                     "database_connected": status.get("connection") == "connected",
-                    "has_active_connections": enb_count > 0,
+                    "has_active_connections": session_count > 0,
                     "enodebs_connected": enb_count > 0
                 }
             }
@@ -387,20 +391,57 @@ class Open5GSService:
 
     async def get_active_connections(self) -> Dict[str, Any]:
         """
-        Get active connections.
-
-        Note: This requires real-time monitoring which is not yet implemented.
-        Returns placeholder data for MVP.
+        Get active UE connections from MME log parsing.
 
         Returns:
-            Active connections information.
+            Active connections information with session details.
         """
-        return {
-            "timestamp": self._timestamp(),
-            "total_active": 0,
-            "connections": [],
-            "note": "Real-time connection tracking requires log parsing (Phase 2)"
-        }
+        try:
+            mme_parser = get_mme_parser()
+            sessions = mme_parser.get_ue_sessions()
+
+            # Enrich sessions with subscriber info from MongoDB
+            enriched_connections = []
+            for session in sessions:
+                imsi = session.get("imsi", "")
+
+                # Try to get device name from MongoDB
+                device_name = None
+                try:
+                    subscriber = self.client.get_subscriber(imsi)
+                    if subscriber:
+                        device_name = subscriber.get("device_name")
+                        # Also get the configured IP
+                        configured_ip = self._get_subscriber_ip(subscriber)
+                        if configured_ip:
+                            session["ip_address"] = configured_ip
+                except Exception:
+                    pass
+
+                enriched_connections.append({
+                    "imsi": imsi,
+                    "device_name": device_name or f"Device-{imsi[-4:]}",
+                    "ip_address": session.get("ip_address"),
+                    "apn": session.get("apn", "internet"),
+                    "state": session.get("state", "attached"),
+                    "attached_at": session.get("attached_at"),
+                    "enb_ue_s1ap_id": session.get("enb_ue_s1ap_id"),
+                    "mme_ue_s1ap_id": session.get("mme_ue_s1ap_id"),
+                })
+
+            return {
+                "timestamp": self._timestamp(),
+                "total_active": len(enriched_connections),
+                "connections": enriched_connections,
+            }
+        except Exception as e:
+            logger.error(f"Error getting active connections: {e}")
+            return {
+                "timestamp": self._timestamp(),
+                "total_active": 0,
+                "connections": [],
+                "error": str(e)
+            }
 
     async def get_enodeb_status(self) -> Dict[str, Any]:
         """
