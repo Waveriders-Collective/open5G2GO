@@ -95,6 +95,18 @@ export const ViewSubscriberModal: React.FC<ViewSubscriberModalProps> = ({
                     <p className="text-xs text-gray-medium font-body">APN</p>
                     <p className="text-sm font-body text-gray-dark">{subscriber.apn}</p>
                   </div>
+                  <div>
+                    <p className="text-xs text-gray-medium font-body">Max Downlink</p>
+                    <p className="text-sm font-body font-mono text-gray-dark">
+                      {details?.ambr?.downlink || 'N/A'}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-medium font-body">Max Uplink</p>
+                    <p className="text-sm font-body font-mono text-gray-dark">
+                      {details?.ambr?.uplink || 'N/A'}
+                    </p>
+                  </div>
                 </div>
               </div>
 

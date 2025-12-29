@@ -137,6 +137,10 @@ export interface GetSubscriberResponse {
   imsi: string;
   host: string;
   timestamp: string;
+  ambr?: {
+    uplink: string;
+    downlink: string;
+  };
   data?: {
     security?: Record<string, unknown>;
     slice?: Record<string, unknown>[];
