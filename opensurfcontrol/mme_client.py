@@ -308,11 +308,12 @@ class MMELogParser:
                         sessions[imsi].state = "detached"
 
                 # Check for session removal (captures APN)
+                # Only mark as detached if it's a real APN (not "Unknown")
                 session_removed_match = SESSION_REMOVED_PATTERN.search(line)
                 if session_removed_match:
                     imsi = session_removed_match.group(1)
                     apn = session_removed_match.group(2)
-                    if imsi in sessions:
+                    if imsi in sessions and apn != "Unknown":
                         sessions[imsi].apn = apn
                         sessions[imsi].state = "detached"
 
