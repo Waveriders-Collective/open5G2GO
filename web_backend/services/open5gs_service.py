@@ -239,8 +239,8 @@ class Open5GSService:
                 updates["device_name"] = name
                 changes.append(f"name → {name}")
 
-            # For IP and APN, we need to update the pdn configuration
-            # NOTE: 4G EPC uses 'pdn' array, not 'slice' (which is 5G SA only)
+            # For IP and APN, we need to update the slice/session configuration
+            # Open5GS uses unified 'slice' schema for both 4G and 5G
             if ip is not None or apn is not None:
                 # Get current subscriber
                 current = self.client.get_subscriber(imsi)
@@ -250,16 +250,18 @@ class Open5GSService:
                         "error": f"Subscriber with IMSI {imsi} not found"
                     }
 
-                # Update the pdn configuration (4G EPC format)
-                if "pdn" in current and len(current["pdn"]) > 0:
-                    pdn = current["pdn"][0]
-                    if apn is not None:
-                        pdn["apn"] = apn
-                        changes.append(f"apn → {apn}")
-                    if ip is not None:
-                        pdn["ue"] = {"addr": ip}
-                        changes.append(f"ip → {ip}")
-                    updates["pdn"] = current["pdn"]
+                # Update the slice/session configuration
+                if "slice" in current and len(current["slice"]) > 0:
+                    slice_config = current["slice"][0]
+                    if "session" in slice_config and len(slice_config["session"]) > 0:
+                        session = slice_config["session"][0]
+                        if apn is not None:
+                            session["name"] = apn
+                            changes.append(f"apn → {apn}")
+                        if ip is not None:
+                            session["ue"] = {"ipv4": ip}
+                            changes.append(f"ip → {ip}")
+                        updates["slice"] = current["slice"]
 
             if not updates:
                 return {
@@ -551,24 +553,28 @@ class Open5GSService:
             }
 
     def _get_subscriber_ip(self, subscriber: Dict[str, Any]) -> Optional[str]:
-        """Extract IP address from subscriber document (4G PDN format)."""
+        """Extract IP address from subscriber document (Open5GS slice/session format)."""
         try:
-            # 4G EPC uses 'pdn' array, not 'slice'
-            pdn_data = subscriber.get("pdn", [])
-            if pdn_data and len(pdn_data) > 0:
-                ue = pdn_data[0].get("ue", {})
-                return ue.get("addr")
+            # Open5GS uses slice/session for both 4G and 5G
+            slice_data = subscriber.get("slice", [])
+            if slice_data and len(slice_data) > 0:
+                session = slice_data[0].get("session", [])
+                if session and len(session) > 0:
+                    ue = session[0].get("ue", {})
+                    return ue.get("ipv4") or ue.get("addr")
         except (KeyError, IndexError):
             pass
         return None
 
     def _get_subscriber_apn(self, subscriber: Dict[str, Any]) -> str:
-        """Extract APN from subscriber document (4G PDN format)."""
+        """Extract APN from subscriber document (Open5GS slice/session format)."""
         try:
-            # 4G EPC uses 'pdn' array with 'apn' field
-            pdn_data = subscriber.get("pdn", [])
-            if pdn_data and len(pdn_data) > 0:
-                return pdn_data[0].get("apn", DEFAULT_APN)
+            # Open5GS uses slice/session with 'name' field for APN
+            slice_data = subscriber.get("slice", [])
+            if slice_data and len(slice_data) > 0:
+                session = slice_data[0].get("session", [])
+                if session and len(session) > 0:
+                    return session[0].get("name", DEFAULT_APN)
         except (KeyError, IndexError):
             pass
         return DEFAULT_APN

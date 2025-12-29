@@ -50,8 +50,8 @@ class ValidationError(Open5GSClientError):
 
 
 # Whitelist of fields that can be updated via update_subscriber
-# NOTE: 4G EPC uses 'pdn' not 'slice' (slice is 5G SA only)
-ALLOWED_UPDATE_FIELDS = frozenset(['device_name', 'pdn', 'ambr'])
+# Open5GS uses unified 'slice' schema for both 4G and 5G
+ALLOWED_UPDATE_FIELDS = frozenset(['device_name', 'slice', 'ambr'])
 
 
 def _validate_imsi(imsi: str) -> None:
@@ -222,40 +222,49 @@ class Open5GSClient:
         _validate_hex_key(k, "Authentication key (k)")
         _validate_hex_key(opc, "Operator key (opc)")
 
-        # Build PDN configuration for 4G EPC
-        # NOTE: 4G uses "pdn" array, NOT "slice" (which is 5G SA only)
-        pdn_config: Dict[str, Any] = {
-            "apn": apn,
-            "type": 1,  # 1=IPv4, 2=IPv6, 3=IPv4v6
+        # Build session configuration using official Open5GS format
+        # Reference: open5gs-dbctl and Open5GS WebUI schema
+        # Open5GS uses slice/session for BOTH 4G and 5G (unified schema)
+        session_config: Dict[str, Any] = {
+            "name": apn,
+            "type": 3,  # 3=IPv4, 2=IPv6, 1=IPv4v6
             "qos": {
-                "qci": DEFAULT_QCI,
+                "index": DEFAULT_QCI,  # QoS Class Identifier (use 'index' not 'qci')
                 "arp": {
                     "priority_level": DEFAULT_ARP_PRIORITY,
                     "pre_emption_capability": 1,
-                    "pre_emption_vulnerability": 1
+                    "pre_emption_vulnerability": 2
                 }
             },
             "ambr": {
                 "uplink": {"value": ambr_ul // 1000, "unit": 0},
                 "downlink": {"value": ambr_dl // 1000, "unit": 0}
-            }
+            },
+            "pcc_rule": []
         }
 
-        # Add static IP if provided
+        # Add static IP if provided (use 'ipv4' field per official schema)
         if ip:
             # Check for duplicate IP address
             existing_with_ip = self.subscribers.find_one({
-                "pdn.ue.addr": ip,
+                "slice.session.ue.ipv4": ip,
                 "imsi": {"$ne": imsi}  # Exclude current subscriber (for updates)
             })
             if existing_with_ip:
                 raise SubscriberError(
                     f"IP address {ip} is already assigned to IMSI {existing_with_ip['imsi']}"
                 )
-            pdn_config["ue"] = {"addr": ip}
+            session_config["ue"] = {"ipv4": ip}
 
+        # Build subscriber document using official Open5GS schema
         subscriber = {
+            "schema_version": 1,
             "imsi": imsi,
+            "msisdn": [],
+            "imeisv": [],
+            "mme_host": [],
+            "mme_realm": [],
+            "purge_flag": [],
             "security": {
                 "k": k,
                 "amf": "8000",
@@ -266,7 +275,16 @@ class Open5GSClient:
                 "uplink": {"value": ambr_ul // 1000, "unit": 0},
                 "downlink": {"value": ambr_dl // 1000, "unit": 0}
             },
-            "pdn": [pdn_config]
+            "slice": [{
+                "sst": 1,
+                "default_indicator": True,
+                "session": [session_config]
+            }],
+            "access_restriction_data": 32,
+            "network_access_mode": 0,
+            "subscriber_status": 0,
+            "operator_determined_barring": 0,
+            "subscribed_rau_tau_timer": 12
         }
 
         # Add device name as custom field if provided
