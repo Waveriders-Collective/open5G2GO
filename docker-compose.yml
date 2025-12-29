@@ -244,6 +244,9 @@ services:
     depends_on:
       mongodb:
         condition: service_healthy
+    # Add docker group for service monitoring socket access
+    group_add:
+      - ${DOCKER_GID:-994}
     environment:
       - MONGODB_URI=mongodb://mongodb:27017/open5gs
       - DEBUG=false
