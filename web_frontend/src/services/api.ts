@@ -18,6 +18,7 @@ import type {
   UpdateSubscriberRequest,
   SubscriberOperationResponse,
   EnodebStatusResponse,
+  ServicesResponse,
 } from '../types/open5gs';
 
 class ApiClient {
@@ -99,6 +100,12 @@ class ApiClient {
   // Get eNodeB status (S1AP)
   async getEnodebStatus(): Promise<EnodebStatusResponse> {
     const response = await this.client.get<EnodebStatusResponse>('/enodeb/status');
+    return response.data;
+  }
+
+  // Get services status
+  async getServices(): Promise<ServicesResponse> {
+    const response = await this.client.get<ServicesResponse>('/services');
     return response.data;
   }
 }

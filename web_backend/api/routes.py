@@ -12,9 +12,11 @@ from .models import (
     AddSubscriberRequest,
     UpdateSubscriberRequest,
     HealthCheckResponse,
+    ServicesResponse,
 )
 from .dependencies import get_service
 from ..services.open5gs_service import Open5GSService
+from ..services.service_monitor import get_service_checker
 from ..config import settings
 
 logger = logging.getLogger(__name__)
@@ -584,3 +586,64 @@ async def refresh_sas_status(
         "message": "SAS status refreshed" if sas_available else "SAS not configured",
         "timestamp": result.get("timestamp", "")
     }
+
+
+# ============================================================================
+# Service Status Endpoints
+# ============================================================================
+
+@router.get(
+    "/services",
+    tags=["Services"],
+    summary="Get Open5GS service status",
+    response_description="Status of all Open5GS services"
+)
+async def get_services_status() -> Dict[str, Any]:
+    """
+    Get the status of all Open5GS services.
+
+    Checks both Docker containers and system processes to determine
+    if each service is running, stopped, or in an error state.
+
+    Returns service status for 4G EPC mode:
+    - MME, HSS, PCRF, SGW-C, SGW-U, PGW-C, PGW-U
+
+    **Example Response:**
+    ```json
+    {
+      "host": "localhost",
+      "timestamp": "2024-01-15T10:30:00.000000",
+      "check_method": "docker",
+      "services": [
+        {
+          "name": "mme",
+          "display_name": "MME (Mobility Management Entity)",
+          "category": "4G EPC Core",
+          "status": "running",
+          "uptime": null,
+          "last_checked": "2024-01-15T10:30:00.000000",
+          "details": "Docker: a1b2c3d4e5f6"
+        }
+      ],
+      "summary": {
+        "total": 7,
+        "running": 5,
+        "stopped": 2,
+        "error": 0,
+        "unknown": 0
+      }
+    }
+    ```
+    """
+    logger.info("Getting services status")
+
+    try:
+        checker = get_service_checker()
+        result = checker.get_all_services_status(mode="4g_epc")
+        return result
+    except Exception as e:
+        logger.error(f"Error getting services status: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={"error": "Failed to get services status", "message": str(e)}
+        )
