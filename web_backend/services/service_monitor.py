@@ -7,11 +7,16 @@ Provides service status detection via Docker and process checking.
 import logging
 import subprocess
 import json
+import socket
+import os
 from datetime import datetime, timezone
 from typing import Dict, List, Any, Optional
 from dataclasses import dataclass
 
 logger = logging.getLogger(__name__)
+
+# Docker socket path
+DOCKER_SOCKET = "/var/run/docker.sock"
 
 
 @dataclass
@@ -73,18 +78,95 @@ class ServiceChecker:
     def __init__(self):
         """Initialize service checker."""
         self._docker_available = self._check_docker()
+        self._container_cache: Optional[List[Dict[str, Any]]] = None
+        self._cache_timestamp: Optional[datetime] = None
 
     def _check_docker(self) -> bool:
-        """Check if Docker is available."""
+        """Check if Docker socket is available."""
+        return os.path.exists(DOCKER_SOCKET)
+
+    def _docker_api_request(self, endpoint: str) -> Optional[Dict[str, Any]]:
+        """
+        Make a request to Docker API via Unix socket.
+
+        Args:
+            endpoint: API endpoint (e.g., "/containers/json")
+
+        Returns:
+            Parsed JSON response or None if failed
+        """
         try:
-            result = subprocess.run(
-                ["docker", "--version"],
-                capture_output=True,
-                timeout=5
-            )
-            return result.returncode == 0
-        except (FileNotFoundError, subprocess.TimeoutExpired):
-            return False
+            sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+            sock.settimeout(5)
+            sock.connect(DOCKER_SOCKET)
+
+            request = f"GET {endpoint} HTTP/1.1\r\nHost: localhost\r\n\r\n"
+            sock.sendall(request.encode())
+
+            # Read response
+            response = b""
+            while True:
+                chunk = sock.recv(4096)
+                if not chunk:
+                    break
+                response += chunk
+
+            sock.close()
+
+            # Parse HTTP response
+            response_str = response.decode("utf-8", errors="replace")
+            # Find the JSON body after headers
+            body_start = response_str.find("\r\n\r\n")
+            if body_start == -1:
+                return None
+
+            body = response_str[body_start + 4:]
+            # Handle chunked transfer encoding
+            if "Transfer-Encoding: chunked" in response_str:
+                # Parse chunked body - find first line (chunk size) and skip it
+                lines = body.split("\r\n")
+                # Reassemble body without chunk size markers
+                json_body = ""
+                i = 0
+                while i < len(lines):
+                    try:
+                        chunk_size = int(lines[i], 16)
+                        if chunk_size == 0:
+                            break
+                        i += 1
+                        json_body += lines[i]
+                        i += 1
+                    except (ValueError, IndexError):
+                        i += 1
+                body = json_body
+
+            return json.loads(body)
+
+        except Exception as e:
+            logger.debug(f"Docker API request failed: {e}")
+            return None
+
+    def _get_containers(self) -> List[Dict[str, Any]]:
+        """
+        Get list of all containers from Docker API.
+
+        Returns:
+            List of container info dictionaries
+        """
+        # Use cache if less than 5 seconds old
+        now = datetime.now(timezone.utc)
+        if (self._container_cache is not None and
+                self._cache_timestamp is not None and
+                (now - self._cache_timestamp).total_seconds() < 5):
+            return self._container_cache
+
+        result = self._docker_api_request("/containers/json?all=true")
+        if result is None:
+            return []
+
+        self._container_cache = result
+        self._cache_timestamp = now
+        return result
 
     def _check_docker_container(self, container_name: str) -> Optional[Dict[str, Any]]:
         """
@@ -100,39 +182,28 @@ class ServiceChecker:
             return None
 
         try:
-            result = subprocess.run(
-                ["docker", "ps", "-a", "--format", "{{json .}}"],
-                capture_output=True,
-                timeout=10,
-                text=True
-            )
+            containers = self._get_containers()
 
-            if result.returncode != 0:
-                return None
+            # Extract service suffix for flexible matching
+            # e.g., "open5gs-mme" -> "-mme"
+            service_suffix = container_name.replace("open5gs", "")
 
-            # Parse each line as JSON
-            for line in result.stdout.strip().split('\n'):
-                if not line.strip():
-                    continue
-                try:
-                    container = json.loads(line)
-                    names = container.get("Names", "")
-                    # Match container by suffix (e.g., "-mme", "-hss") to support
-                    # different prefixes like open5gs-mme or open5g2go-mme
-                    service_suffix = container_name.replace("open5gs", "")
-                    if container_name in names or names.endswith(service_suffix):
+            for container in containers:
+                names = container.get("Names", [])
+                # Docker API returns names with leading slash
+                for name in names:
+                    clean_name = name.lstrip("/")
+                    if container_name in clean_name or clean_name.endswith(service_suffix):
                         state = container.get("State", "unknown")
                         running = state == "running"
                         return {
                             "running": running,
                             "status": state,
-                            "container_id": container.get("ID", "")[:12],
+                            "container_id": container.get("Id", "")[:12],
                         }
-                except json.JSONDecodeError:
-                    continue
 
             return None
-        except (subprocess.TimeoutExpired, Exception) as e:
+        except Exception as e:
             logger.warning(f"Error checking Docker container {container_name}: {e}")
             return None
 
