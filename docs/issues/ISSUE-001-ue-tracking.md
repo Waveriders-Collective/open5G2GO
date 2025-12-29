@@ -163,3 +163,20 @@ Implemented **Option A: MME Log Parsing** in branch `feature/ue-session-tracking
 12/29 09:17:37.840: [mme] INFO: Removed Session: UE IMSI:[315010000000010] APN:[internet]
 12/29 09:17:37.840: [mme] INFO: [Removed] Number of MME-Sessions is now 0
 ```
+
+### Bug Fixes During Implementation
+
+1. **Ignore temporary session removals** (`APN:[Unknown]`)
+   - Open5GS creates temporary sessions that get removed immediately
+   - Only mark sessions as detached when a real APN session is removed
+
+2. **Align API field names with frontend**
+   - Frontend expected: `name`, `ip`, `cm_state`
+   - API was returning: `device_name`, `ip_address`, `state`
+   - Fixed to match frontend expectations
+
+### Commits
+
+1. `feat(ue-tracking): implement real-time UE session tracking from MME logs`
+2. `fix(ue-tracking): ignore Unknown APN session removals`
+3. `fix(ue-tracking): align API field names with frontend expectations`
