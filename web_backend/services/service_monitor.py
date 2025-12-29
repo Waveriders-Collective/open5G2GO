@@ -85,7 +85,7 @@ class ServiceChecker:
         """Check if Docker socket is available."""
         return os.path.exists(DOCKER_SOCKET)
 
-    def _docker_api_request(self, endpoint: str) -> Optional[Dict[str, Any]]:
+    def _docker_api_request(self, endpoint: str) -> Optional[List[Dict[str, Any]]]:
         """
         Make a request to Docker API via Unix socket.
 
@@ -100,16 +100,20 @@ class ServiceChecker:
             sock.settimeout(5)
             sock.connect(DOCKER_SOCKET)
 
-            request = f"GET {endpoint} HTTP/1.1\r\nHost: localhost\r\n\r\n"
+            # Use HTTP/1.0 to avoid keep-alive and get connection close
+            request = f"GET {endpoint} HTTP/1.0\r\nHost: localhost\r\n\r\n"
             sock.sendall(request.encode())
 
-            # Read response
+            # Read response with timeout
             response = b""
             while True:
-                chunk = sock.recv(4096)
-                if not chunk:
+                try:
+                    chunk = sock.recv(4096)
+                    if not chunk:
+                        break
+                    response += chunk
+                except socket.timeout:
                     break
-                response += chunk
 
             sock.close()
 
@@ -120,25 +124,9 @@ class ServiceChecker:
             if body_start == -1:
                 return None
 
-            body = response_str[body_start + 4:]
-            # Handle chunked transfer encoding
-            if "Transfer-Encoding: chunked" in response_str:
-                # Parse chunked body - find first line (chunk size) and skip it
-                lines = body.split("\r\n")
-                # Reassemble body without chunk size markers
-                json_body = ""
-                i = 0
-                while i < len(lines):
-                    try:
-                        chunk_size = int(lines[i], 16)
-                        if chunk_size == 0:
-                            break
-                        i += 1
-                        json_body += lines[i]
-                        i += 1
-                    except (ValueError, IndexError):
-                        i += 1
-                body = json_body
+            body = response_str[body_start + 4:].strip()
+            if not body:
+                return None
 
             return json.loads(body)
 
