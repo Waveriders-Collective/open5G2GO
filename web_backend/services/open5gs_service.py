@@ -6,6 +6,7 @@ by wrapping the Open5GS MongoDB client.
 """
 
 import logging
+import os
 from datetime import datetime, timezone
 from typing import Dict, Any, Optional, List
 
@@ -65,6 +66,35 @@ def load_enodeb_config(config_path: Optional[str] = None) -> Dict[str, Any]:
         config = yaml.safe_load(f)
 
     return config or {}
+
+
+def load_open5gs_config(config_name: str) -> Optional[Dict[str, Any]]:
+    """
+    Load an Open5GS configuration file.
+
+    Args:
+        config_name: Name of the config file (e.g., 'mme', 'smf', 'sgwu')
+
+    Returns:
+        Parsed YAML config or None if not found.
+    """
+    search_paths = [
+        Path(f"/etc/open5gs/{config_name}.yaml"),  # Docker container (mounted)
+        Path(f"open5gs/config/{config_name}.yaml"),  # Local dev
+        Path(f"../open5gs/config/{config_name}.yaml"),  # From web_backend/
+    ]
+
+    for path in search_paths:
+        if path.exists():
+            try:
+                with open(path, 'r') as f:
+                    return yaml.safe_load(f)
+            except Exception as e:
+                logger.warning(f"Failed to parse {path}: {e}")
+                continue
+
+    logger.warning(f"Open5GS config {config_name}.yaml not found")
+    return None
 
 
 class Open5GSService:
@@ -359,31 +389,102 @@ class Open5GSService:
 
     async def get_network_config(self) -> Dict[str, Any]:
         """
-        Get network configuration.
+        Get network configuration from actual Open5GS config files.
+
+        Reads from:
+        - mme.yaml: PLMN, TAC, network name, S1AP port
+        - smf.yaml: APN/DNN, UE IP pool
+        - sgwu.yaml: GTP-U advertise IP (fallback for host IP)
 
         Returns:
-            Network configuration details.
+            Network configuration details including eNodeB settings.
         """
+        # Load actual Open5GS config files
+        mme_config = load_open5gs_config("mme")
+        smf_config = load_open5gs_config("smf")
+        sgwu_config = load_open5gs_config("sgwu")
+
+        # Extract MME config values with fallbacks to constants
+        mcc = MCC
+        mnc = MNC
+        tac = TAC
+        network_name = NETWORK_NAME_SHORT
+        mme_port = 36412
+
+        if mme_config:
+            mme = mme_config.get("mme", {})
+            # Get PLMN from TAI config
+            tai_list = mme.get("tai", [])
+            if tai_list:
+                plmn = tai_list[0].get("plmn_id", {})
+                mcc = plmn.get("mcc", MCC)
+                mnc = plmn.get("mnc", MNC)
+                tac = tai_list[0].get("tac", TAC)
+            # Get network name (prefer full name)
+            network_name_cfg = mme.get("network_name", {})
+            network_name = network_name_cfg.get("full", NETWORK_NAME_SHORT)
+            # Get S1AP port
+            s1ap = mme.get("s1ap", {})
+            servers = s1ap.get("server", [])
+            if servers:
+                mme_port = servers[0].get("port", 36412)
+
+        # Extract SMF/APN config
+        apn_name = DEFAULT_APN
+        ue_subnet = None
+        ue_gateway = None
+
+        if smf_config:
+            smf = smf_config.get("smf", {})
+            sessions = smf.get("session", [])
+            if sessions:
+                apn_name = sessions[0].get("dnn", DEFAULT_APN)
+                ue_subnet = sessions[0].get("subnet")
+                ue_gateway = sessions[0].get("gateway")
+
+        # Get host IP: prefer HOST_IP env var, fallback to sgwu advertise IP
+        host_ip = os.getenv("HOST_IP")
+        if not host_ip and sgwu_config:
+            sgwu = sgwu_config.get("sgwu", {})
+            gtpu = sgwu.get("gtpu", {})
+            servers = gtpu.get("server", [])
+            if servers:
+                host_ip = servers[0].get("advertise")
+        if not host_ip:
+            host_ip = "10.48.0.110"  # Final fallback
+
+        # Build PLMNID string
+        plmnid = f"{mcc}{mnc}"
+
         return {
             "timestamp": self._timestamp(),
+            "host": host_ip,  # Open5GS reachable interface (MME IP)
             "network_identity": {
-                "plmnid": PLMNID,
-                "mcc": MCC,
-                "mnc": MNC,
-                "network_name": NETWORK_NAME_SHORT,
-                "tac": str(TAC)
+                "plmnid": plmnid,
+                "mcc": mcc,
+                "mnc": mnc,
+                "network_name": network_name,
+                "tac": str(tac)
+            },
+            "enodeb_config": {
+                "mme_ip": host_ip,
+                "mme_port": mme_port,
+                "plmn_id": f"{mcc}-{mnc}",
+                "tac": tac,
             },
             "apns": {
                 "total": 1,
                 "list": [
                     {
-                        "name": DEFAULT_APN,
-                        "downlink_mbps": DEFAULT_AMBR_DL // 1000000,
-                        "uplink_mbps": DEFAULT_AMBR_UL // 1000000
+                        "name": apn_name,
+                        "downlink_kbps": f"{DEFAULT_AMBR_DL // 1000000} Mbps",
+                        "uplink_kbps": f"{DEFAULT_AMBR_UL // 1000000} Mbps",
                     }
                 ]
             },
             "ip_pool": {
+                "subnet": ue_subnet,
+                "gateway": ue_gateway,
                 "start": UE_POOL_START,
                 "end": UE_POOL_END
             }
