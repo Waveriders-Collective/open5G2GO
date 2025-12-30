@@ -30,6 +30,7 @@ theme:
 nav:
   - Home: index.md
   - Quick Start: quickstart.md
+  - User Guide: user-guide.md
   - eNodeB Setup: enodeb-setup.md
   - Troubleshooting: troubleshooting.md
 
