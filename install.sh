@@ -1,12 +1,12 @@
 #!/bin/bash
 # install.sh - Open5G2GO Installer
-# Usage: curl -fsSL https://raw.githubusercontent.com/Waveriders-Collective/open5g2go/main/install.sh | bash
+# Usage: curl -fsSL https://raw.githubusercontent.com/Waveriders-Collective/openSurfcontrol/main/install.sh | bash
 
 set -e
 
 # Configuration
-REPO_URL="https://github.com/Waveriders-Collective/open5g2go.git"
-INSTALL_DIR="${OPEN5G2GO_DIR:-$HOME/open5g2go}"
+REPO_URL="https://github.com/Waveriders-Collective/openSurfcontrol.git"
+INSTALL_DIR="${OPEN5G2GO_DIR:-$HOME/openSurfcontrol}"
 
 # Colors
 RED='\033[0;31m'
