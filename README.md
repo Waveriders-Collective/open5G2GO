@@ -9,19 +9,45 @@ Homelab toolkit for private 4G cellular networks, combining:
 
 ## Quick Start
 
+### One-Line Install (Recommended)
+
 ```bash
-# Clone the repository
-git clone git@github.com:Waveriders-Collective/open5g2go.git
-cd open5g2go
+curl -fsSL https://raw.githubusercontent.com/Waveriders-Collective/openSurfcontrol/main/install.sh | bash
+```
 
-# Start the stack
-docker-compose up -d
+This will:
+1. Check system prerequisites
+2. Clone the repository
+3. Run interactive setup wizard
+4. Pull pre-built Docker images
+5. Start the stack
 
-# Wait for startup (~90 seconds)
-sleep 90 && docker-compose ps
+### Manual Install
 
-# Access Web UI
-open http://localhost:8080
+```bash
+# Clone repository
+git clone https://github.com/Waveriders-Collective/openSurfcontrol.git
+cd openSurfcontrol
+
+# Run setup
+./scripts/preflight-check.sh
+./scripts/setup-wizard.sh
+./scripts/pull-and-run.sh
+```
+
+### Requirements
+
+- Ubuntu 22.04+ (or similar Linux with Docker)
+- Docker 24.0+
+- Docker Compose v2+
+- 5GB free disk space
+- Ports: 36412/sctp, 2152/udp, 8080/tcp
+
+### Updates
+
+```bash
+cd ~/openSurfcontrol
+./scripts/update.sh
 ```
 
 ## Project Status
