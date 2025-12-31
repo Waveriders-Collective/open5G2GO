@@ -123,6 +123,7 @@ services:
       start_period: 20s
 
   # SGWU - Serving Gateway User Plane
+  # Uses advertise field to tell eNB the external IP while binding to Docker bridge
   sgwu:
     build:
       context: ./open5gs
@@ -130,15 +131,13 @@ services:
     container_name: open5g2go-sgwu
     restart: unless-stopped
     command: open5gs-sgwud
-    cap_add:
-      - NET_ADMIN
-    devices:
-      - /dev/net/tun
+    environment:
+      - HOST_IP=${HOST_IP:-10.48.0.110}
     volumes:
       - ./open5gs/config/sgwu.yaml:/etc/open5gs/sgwu.yaml:ro
       - open5gs_logs:/var/log/open5gs
     ports:
-      - "2152:2152/udp"  # GTP-U for user data
+      - "2152:2152/udp"   # GTP-U for user data from eNodeB
     networks:
       open5g2go:
         ipv4_address: 172.26.0.13

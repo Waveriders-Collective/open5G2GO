@@ -1,5 +1,8 @@
 # Open5GS SGWU (Serving Gateway User Plane) Configuration
 # Handles GTP-U user data plane for the Serving Gateway
+#
+# NOTE: Uses advertise field to tell MME/eNB the external IP for GTP-U,
+# while binding to Docker bridge IP. This is the community-standard approach.
 
 logger:
   file:
@@ -12,10 +15,11 @@ global:
 
 sgwu:
   # GTP-U interface - receives user data from eNodeB
+  # Binds to Docker bridge IP, advertises host IP to eNB
   gtpu:
     server:
       - address: 172.26.0.13
-        advertise: 10.48.0.110  # Docker host IP (eNodeB sees this)
+        advertise: 10.48.0.110
 
   # PFCP interface to SGWC
   pfcp:
