@@ -46,9 +46,15 @@ if [ "$1" = "open5gs-upfd" ]; then
     ) &
 fi
 
-# For SGWU: Similar network setup
+# For SGWU: Network setup and HOST_IP substitution
 if [ "$1" = "open5gs-sgwud" ]; then
     echo "Setting up SGWU networking..."
+
+    # Substitute HOST_IP in config if environment variable is set
+    if [ -n "$HOST_IP" ] && [ -f /etc/open5gs/sgwu.yaml ]; then
+        echo "Configuring SGWU advertise IP: $HOST_IP"
+        sed -i "s|advertise:.*|advertise: $HOST_IP|g" /etc/open5gs/sgwu.yaml
+    fi
 
     if [ ! -e /dev/net/tun ]; then
         mkdir -p /dev/net

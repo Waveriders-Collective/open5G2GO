@@ -126,8 +126,10 @@ services:
       - NET_ADMIN
     devices:
       - /dev/net/tun
+    environment:
+      - HOST_IP=${HOST_IP:-10.48.0.110}
     volumes:
-      - ./open5gs/config/sgwu.yaml:/etc/open5gs/sgwu.yaml:ro
+      - ./open5gs/config/sgwu.yaml:/etc/open5gs/sgwu.yaml  # Not :ro - entrypoint modifies
       - open5gs_logs:/var/log/open5gs
     ports:
       - "2152:2152/udp"  # GTP-U for user data
