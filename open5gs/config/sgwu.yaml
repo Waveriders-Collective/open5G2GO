@@ -1,8 +1,5 @@
 # Open5GS SGWU (Serving Gateway User Plane) Configuration
 # Handles GTP-U user data plane for the Serving Gateway
-#
-# NOTE: SGWU runs with network_mode: host to preserve GTP-U source IPs.
-# This avoids Docker DNAT modifying packet sources.
 
 logger:
   file:
@@ -15,16 +12,15 @@ global:
 
 sgwu:
   # GTP-U interface - receives user data from eNodeB
-  # Binds to host IP since we're using host networking
   gtpu:
     server:
-      - address: 10.48.0.110
+      - address: 172.26.0.13
+        advertise: 10.48.0.110  # Docker host IP (eNodeB sees this)
 
   # PFCP interface to SGWC
-  # SGWC is on Docker bridge network at 172.26.0.12
   pfcp:
     server:
-      - address: 10.48.0.110
+      - address: 172.26.0.13
     client:
       sgwc:
         - address: 172.26.0.12

@@ -108,7 +108,7 @@ services:
     command: open5gs-sgwcd
     depends_on:
       sgwu:
-        condition: service_started  # SGWU on host network, can't use service_healthy
+        condition: service_healthy
     volumes:
       - ./open5gs/config/sgwc.yaml:/etc/open5gs/sgwc.yaml:ro
       - open5gs_logs:/var/log/open5gs
@@ -123,7 +123,6 @@ services:
       start_period: 20s
 
   # SGWU - Serving Gateway User Plane
-  # Uses host networking to avoid DNAT modifying GTP-U source IPs
   sgwu:
     build:
       context: ./open5gs
@@ -131,13 +130,18 @@ services:
     container_name: open5g2go-sgwu
     restart: unless-stopped
     command: open5gs-sgwud
-    network_mode: host
-    environment:
-      - HOST_IP=${HOST_IP:-10.48.0.110}
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun
     volumes:
       - ./open5gs/config/sgwu.yaml:/etc/open5gs/sgwu.yaml:ro
       - open5gs_logs:/var/log/open5gs
-    # Note: No ports mapping needed with host networking
+    ports:
+      - "2152:2152/udp"  # GTP-U for user data
+    networks:
+      open5g2go:
+        ipv4_address: 172.26.0.13
     healthcheck:
       test: ["CMD", "pgrep", "-f", "open5gs-sgwud"]
       interval: 10s
