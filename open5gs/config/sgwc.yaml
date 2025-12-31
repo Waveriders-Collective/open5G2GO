@@ -1,5 +1,7 @@
 # Open5GS SGWC (Serving Gateway Control Plane) Configuration
 # Manages GTP-C signaling for the Serving Gateway
+#
+# NOTE: SGWU runs on host network at 10.48.0.110
 
 logger:
   file:
@@ -17,9 +19,10 @@ sgwc:
       - address: 172.26.0.12
 
   # PFCP interface to SGWU
+  # SGWU is on host network at 10.48.0.110
   pfcp:
     server:
       - address: 172.26.0.12
     client:
       sgwu:
-        - address: 172.26.0.13
+        - address: 10.48.0.110
