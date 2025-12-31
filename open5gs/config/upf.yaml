@@ -19,11 +19,10 @@ upf:
       smf:
         - address: 172.26.0.14
 
-  # GTP-U interface
+  # GTP-U interface (S5-U from SGWU - internal only)
   gtpu:
     server:
       - address: 172.26.0.15
-        advertise: 10.48.0.110  # Docker host IP
 
   # UE IP pool and TUN interface
   session:
