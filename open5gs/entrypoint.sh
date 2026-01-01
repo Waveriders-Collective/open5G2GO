@@ -51,9 +51,19 @@ if [ "$1" = "open5gs-sgwud" ]; then
     echo "Setting up SGWU networking..."
 
     # Substitute HOST_IP in config if environment variable is set
+    # Note: setup-wizard.sh should pre-configure this, but we keep a fallback
     if [ -n "$HOST_IP" ] && [ -f /etc/open5gs/sgwu.yaml ]; then
-        echo "Configuring SGWU advertise IP: $HOST_IP"
-        sed -i "s|advertise:.*|advertise: $HOST_IP|g" /etc/open5gs/sgwu.yaml
+        # Check if already configured correctly
+        if grep -q "advertise: $HOST_IP" /etc/open5gs/sgwu.yaml 2>/dev/null; then
+            echo "SGWU advertise IP already configured: $HOST_IP"
+        else
+            echo "Configuring SGWU advertise IP: $HOST_IP"
+            # Use temp file approach - Docker bind mounts don't support atomic rename (sed -i)
+            # Write to /tmp then cat back to avoid "Device or resource busy" errors
+            sed "s|advertise:.*|advertise: $HOST_IP|g" /etc/open5gs/sgwu.yaml > /tmp/sgwu.yaml.tmp
+            cat /tmp/sgwu.yaml.tmp > /etc/open5gs/sgwu.yaml
+            rm -f /tmp/sgwu.yaml.tmp
+        fi
     fi
 
     if [ ! -e /dev/net/tun ]; then
