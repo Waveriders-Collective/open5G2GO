@@ -10,7 +10,51 @@ The S1AP protocol is responsible for:
 - Session management
 - Signaling between the eNodeB and core network
 
-## Required Configuration Parameters
+## Step 1: Register Your eNodeB in Open5G2GO
+
+Before configuring the eNodeB hardware, you must register it in Open5G2GO's configuration file.
+
+### Edit the eNodeB Configuration File
+
+Open the configuration file:
+
+```bash
+nano config/enodebs.yaml
+```
+
+### Update the eNodeB Entry
+
+Replace the example values with your eNodeB's actual information:
+
+```yaml
+enodebs:
+  - serial_number: "YOUR_SERIAL_NUMBER"    # From eNodeB label or web UI
+    ip_address: "YOUR_ENODEB_IP"           # Management IP for SNMP monitoring
+    name: "My-eNodeB"                      # Friendly name for dashboard
+    location: "Office Building A"          # Physical location
+    enabled: true
+```
+
+| Field | Where to Find It |
+|-------|------------------|
+| `serial_number` | Label on eNodeB hardware, or eNodeB web UI Status page |
+| `ip_address` | Your eNodeB's management IP (check your network config) |
+| `name` | Choose any friendly name |
+| `location` | Physical location description |
+
+### Apply the Configuration
+
+After saving the file, restart the backend service:
+
+```bash
+sudo docker compose -f docker-compose.prod.yml restart backend
+```
+
+The dashboard will now recognize and monitor your eNodeB.
+
+---
+
+## Step 2: Gather Connection Parameters
 
 Before configuring your eNodeB, gather the following information:
 
@@ -24,15 +68,15 @@ Before configuring your eNodeB, gather the following information:
 
 > **Tip:** To find your Docker host IP, run `hostname -I` on your host machine or check your network configuration. For Docker Desktop, this may be `127.0.0.1` or your machine's local network IP.
 
-## Baicells Web Interface Configuration
+## Step 3: Configure the eNodeB Hardware
 
-### Step 1: Access the eNodeB Web Interface
+### Access the eNodeB Web Interface
 
 1. Open a web browser
 2. Navigate to the eNodeB's IP address (e.g., `http://192.168.1.100`)
 3. Enter your login credentials (default credentials may vary by firmware version)
 
-### Step 2: Configure MME Settings
+### Configure MME Settings
 
 1. Navigate to **LTE > MME Configuration**
 2. In the MME IP Address field, enter your Docker host IP address
@@ -46,7 +90,7 @@ Before configuring your eNodeB, gather the following information:
     - Firewall rules allow traffic on port 36412 (SCTP)
     - The Docker host's firewall is configured to accept S1AP connections
 
-### Step 3: Configure PLMN Settings
+### Configure PLMN Settings
 
 1. Navigate to **LTE > PLMN Configuration**
 2. Set the following parameters:
@@ -58,7 +102,7 @@ Before configuring your eNodeB, gather the following information:
 !!! warning
     Ensure the PLMN is enabled after configuration. The eNodeB will not register if the PLMN is disabled.
 
-### Step 4: Configure TAC (if required)
+### Configure TAC (if required)
 
 Some eNodeB configurations may require explicit TAC setting:
 
