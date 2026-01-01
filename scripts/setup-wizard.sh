@@ -301,6 +301,69 @@ EOF
 echo -e "Configuration file generated: ${GREEN}.env${NC}"
 
 # =============================================================================
+# Step 6: Generate FreeDiameter Certificates (Fix #33)
+# =============================================================================
+
+echo ""
+echo -e "${BLUE}Step 6: FreeDiameter Certificates${NC}"
+echo "─────────────────────────────────"
+echo ""
+
+CERT_DIR="$PROJECT_DIR/open5gs/config/freeDiameter"
+
+# Generate certificates if not present
+if [ ! -f "$CERT_DIR/ca.cert.pem" ]; then
+    echo "Generating FreeDiameter certificates..."
+
+    # Generate DH parameters
+    openssl dhparam -out "$CERT_DIR/dh.pem" 2048 2>/dev/null
+
+    # Generate CA key and certificate
+    openssl genrsa -out "$CERT_DIR/ca.key.pem" 2048 2>/dev/null
+    openssl req -new -x509 -days 3650 -key "$CERT_DIR/ca.key.pem" -out "$CERT_DIR/ca.cert.pem" \
+        -subj "/CN=Open5G2GO-CA/O=Waveriders/C=US" 2>/dev/null
+
+    # Generate certificates for each component
+    for component in hss mme smf pcrf; do
+        openssl genrsa -out "$CERT_DIR/${component}.key.pem" 2048 2>/dev/null
+        openssl req -new -key "$CERT_DIR/${component}.key.pem" -out "$CERT_DIR/${component}.csr.pem" \
+            -subj "/CN=${component}.open5g2go.local/O=Waveriders/C=US" 2>/dev/null
+        openssl x509 -req -days 3650 -in "$CERT_DIR/${component}.csr.pem" \
+            -CA "$CERT_DIR/ca.cert.pem" -CAkey "$CERT_DIR/ca.key.pem" -CAcreateserial \
+            -out "$CERT_DIR/${component}.cert.pem" 2>/dev/null
+        rm -f "$CERT_DIR/${component}.csr.pem"
+    done
+
+    # Set proper permissions
+    chmod 644 "$CERT_DIR"/*.pem 2>/dev/null || true
+    chmod 600 "$CERT_DIR"/*.key.pem 2>/dev/null || true
+
+    echo -e "FreeDiameter certificates: ${GREEN}Generated${NC}"
+else
+    echo -e "FreeDiameter certificates: ${GREEN}Already exist${NC}"
+fi
+
+# =============================================================================
+# Step 7: Pre-configure SGWU (Fix #34)
+# =============================================================================
+
+echo ""
+echo -e "${BLUE}Step 7: SGWU Configuration${NC}"
+echo "─────────────────────────────────"
+echo ""
+
+SGWU_CONFIG="$PROJECT_DIR/open5gs/config/sgwu.yaml"
+if [ -f "$SGWU_CONFIG" ]; then
+    echo "Configuring SGWU advertise address..."
+    # Use temp file approach (works on all filesystems including Docker bind mounts)
+    sed "s/advertise:.*/advertise: ${DOCKER_HOST_IP}/" "$SGWU_CONFIG" > "$SGWU_CONFIG.tmp"
+    mv "$SGWU_CONFIG.tmp" "$SGWU_CONFIG"
+    echo -e "SGWU advertise IP: ${GREEN}${DOCKER_HOST_IP}${NC}"
+else
+    echo -e "${YELLOW}Warning: SGWU config not found at $SGWU_CONFIG${NC}"
+fi
+
+# =============================================================================
 # Summary
 # =============================================================================
 
