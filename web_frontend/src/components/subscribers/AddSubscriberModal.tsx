@@ -13,16 +13,13 @@ interface AddSubscriberModalProps {
   onSuccess: () => void;
 }
 
-// IMSI prefix for Open5GS (PLMN 315-010)
-const IMSI_PREFIX = '31501000000';
-
 export const AddSubscriberModal: React.FC<AddSubscriberModalProps> = ({
   isOpen,
   onClose,
   onSuccess,
 }) => {
   const [formData, setFormData] = useState<AddSubscriberRequest>({
-    device_number: '',
+    imsi: '',
     name: '',
     ip: '',
   });
@@ -30,22 +27,15 @@ export const AddSubscriberModal: React.FC<AddSubscriberModalProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-  // Generate full IMSI from 4-digit device number
-  const getFullImsi = (deviceNumber: string): string => {
-    const padded = deviceNumber.padStart(4, '0');
-    return `${IMSI_PREFIX}${padded}`;
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
     setSuccess(null);
 
-    // Validate device number
-    const deviceNum = parseInt(formData.device_number, 10);
-    if (isNaN(deviceNum) || deviceNum < 1 || deviceNum > 9999) {
-      setError('Device number must be between 0001 and 9999');
+    // Validate IMSI (must be exactly 15 digits)
+    if (!/^\d{15}$/.test(formData.imsi)) {
+      setError('IMSI must be exactly 15 digits');
       setLoading(false);
       return;
     }
@@ -61,7 +51,7 @@ export const AddSubscriberModal: React.FC<AddSubscriberModalProps> = ({
           onClose();
           // Reset form
           setFormData({
-            device_number: '',
+            imsi: '',
             name: '',
             ip: '',
           });
@@ -79,7 +69,7 @@ export const AddSubscriberModal: React.FC<AddSubscriberModalProps> = ({
   };
 
   const handleClose = () => {
-    setFormData({ device_number: '', name: '', ip: '' });
+    setFormData({ imsi: '', name: '', ip: '' });
     setError(null);
     setSuccess(null);
     onClose();
@@ -112,25 +102,25 @@ export const AddSubscriberModal: React.FC<AddSubscriberModalProps> = ({
 
           <div>
             <label className="block text-sm font-body text-gray-dark mb-1">
-              Device Number (last 4 digits of IMSI)
+              IMSI (15 digits)
             </label>
             <input
               type="text"
-              pattern="[0-9]{1,4}"
-              maxLength={4}
+              pattern="[0-9]{15}"
+              maxLength={15}
               required
-              placeholder="e.g., 0001"
-              value={formData.device_number}
+              placeholder="e.g., 315010000000001"
+              value={formData.imsi}
               onChange={(e) => {
-                const value = e.target.value.replace(/\D/g, '').slice(0, 4);
-                setFormData({ ...formData, device_number: value });
+                const value = e.target.value.replace(/\D/g, '').slice(0, 15);
+                setFormData({ ...formData, imsi: value });
               }}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary font-body font-mono text-lg"
             />
             <div className="flex items-start mt-2 text-xs text-gray-medium">
               <HelpCircle className="w-4 h-4 mr-1 flex-shrink-0 mt-0.5" />
               <span>
-                Full IMSI will be: <span className="font-mono">{formData.device_number ? getFullImsi(formData.device_number) : `${IMSI_PREFIX}____`}</span>
+                Enter the full 15-digit IMSI from your SIM card
               </span>
             </div>
           </div>

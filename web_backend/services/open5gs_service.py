@@ -20,7 +20,6 @@ from opensurfcontrol.mongodb_client import Open5GSClient, get_client
 from opensurfcontrol.mme_client import get_mme_parser
 from opensurfcontrol.snmp_client import get_snmp_client
 from opensurfcontrol.constants import (
-    IMSI_PREFIX,
     DEFAULT_APN,
     DEFAULT_K,
     DEFAULT_OPC,
@@ -195,36 +194,42 @@ class Open5GSService:
 
     async def add_subscriber(
         self,
-        device_number: int,
+        imsi: str,
         name: Optional[str] = None,
         apn: str = DEFAULT_APN,
         ip: Optional[str] = None,
-        imsi: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
         Add a new subscriber.
 
         Args:
-            device_number: The device number (last 4 digits of IMSI).
+            imsi: Full 15-digit IMSI from SIM card.
             name: Optional device name.
             apn: Access Point Name.
             ip: Optional static IP address.
-            imsi: Optional full IMSI (overrides device_number calculation).
 
         Returns:
             Result with subscriber details.
         """
         try:
-            # Build IMSI from device number if not provided
-            if imsi is None:
-                imsi = f"{IMSI_PREFIX}{str(device_number).zfill(4)}"
+            # Validate IMSI format
+            if not imsi or not imsi.isdigit() or len(imsi) != 15:
+                return {
+                    "success": False,
+                    "timestamp": self._timestamp(),
+                    "error": "IMSI must be exactly 15 digits"
+                }
+
+            # Extract last 4 digits for device naming and IP calculation
+            device_suffix = imsi[-4:]
 
             # Generate device name if not provided
             if name is None:
-                name = f"Device-{str(device_number).zfill(4)}"
+                name = f"Device-{device_suffix}"
 
-            # Calculate IP if not provided
+            # Calculate IP if not provided (use last 4 digits of IMSI)
             if ip is None:
+                device_number = int(device_suffix)
                 ip = self._calculate_ip(device_number)
 
             # Add subscriber

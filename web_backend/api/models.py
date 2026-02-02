@@ -18,11 +18,12 @@ from pydantic import BaseModel, Field
 
 class AddSubscriberRequest(BaseModel):
     """Request body for adding a new subscriber (device)."""
-    device_number: int = Field(
+    imsi: str = Field(
         ...,
-        ge=1,
-        le=9999,
-        description="Device number (1-9999, becomes last 4 digits of IMSI)"
+        min_length=15,
+        max_length=15,
+        pattern=r"^\d{15}$",
+        description="Full 15-digit IMSI from SIM card"
     )
     name: Optional[str] = Field(
         None,
@@ -38,13 +39,6 @@ class AddSubscriberRequest(BaseModel):
         None,
         pattern=r"^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$",
         description="Static IP address (auto-assigned if not specified)"
-    )
-    imsi: Optional[str] = Field(
-        None,
-        min_length=15,
-        max_length=15,
-        pattern=r"^\d{15}$",
-        description="Full IMSI (overrides device_number calculation)"
     )
 
 
