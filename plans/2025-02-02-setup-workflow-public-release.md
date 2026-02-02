@@ -378,4 +378,4 @@ After all phases complete:
 
 | Date | Author | Changes |
 |------|--------|---------|
-| 2025-02-02 | Claude + Jeremy | Initial plan |
+| 2025-02-02 | Waveriders Collective Inc. | Initial plan |
