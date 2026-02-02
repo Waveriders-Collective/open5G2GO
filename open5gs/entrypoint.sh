@@ -46,23 +46,22 @@ if [ "$1" = "open5gs-upfd" ]; then
     ) &
 fi
 
-# For SGWU: Network setup and HOST_IP substitution
+# For SGWU: Network setup
+# Note: The advertise IP should be pre-configured by setup-wizard.sh
+# We no longer modify the config at runtime since it's mounted read-only
 if [ "$1" = "open5gs-sgwud" ]; then
     echo "Setting up SGWU networking..."
 
-    # Substitute HOST_IP in config if environment variable is set
-    # Note: setup-wizard.sh should pre-configure this, but we keep a fallback
+    # Verify advertise IP is configured (informational only)
     if [ -n "$HOST_IP" ] && [ -f /etc/open5gs/sgwu.yaml ]; then
-        # Check if already configured correctly
-        if grep -q "advertise: $HOST_IP" /etc/open5gs/sgwu.yaml 2>/dev/null; then
-            echo "SGWU advertise IP already configured: $HOST_IP"
-        else
-            echo "Configuring SGWU advertise IP: $HOST_IP"
-            # Use temp file approach - Docker bind mounts don't support atomic rename (sed -i)
-            # Write to /tmp then cat back to avoid "Device or resource busy" errors
-            sed "s|advertise:.*|advertise: $HOST_IP|g" /etc/open5gs/sgwu.yaml > /tmp/sgwu.yaml.tmp
-            cat /tmp/sgwu.yaml.tmp > /etc/open5gs/sgwu.yaml
-            rm -f /tmp/sgwu.yaml.tmp
+        if grep -q "advertise:" /etc/open5gs/sgwu.yaml 2>/dev/null; then
+            CONFIGURED_IP=$(grep "advertise:" /etc/open5gs/sgwu.yaml | awk '{print $2}' | head -1)
+            if [ "$CONFIGURED_IP" = "$HOST_IP" ]; then
+                echo "SGWU advertise IP correctly configured: $HOST_IP"
+            else
+                echo "WARNING: SGWU advertise IP ($CONFIGURED_IP) differs from HOST_IP ($HOST_IP)"
+                echo "If eNodeB cannot connect, run: ./scripts/setup-wizard.sh"
+            fi
         fi
     fi
 

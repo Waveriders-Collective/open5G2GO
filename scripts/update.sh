@@ -12,16 +12,43 @@ PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 cd "$PROJECT_DIR"
 
 # Colors
-GREEN='[0;32m'
-YELLOW='[1;33m'
-BOLD='[1m'
-NC='[0m'
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BOLD='\033[1m'
+NC='\033[0m'
 
 echo ""
 echo -e "${BOLD}========================================"
 echo "  Open5G2GO Update"
 echo -e "========================================${NC}"
 echo ""
+
+# =============================================================================
+# Pre-flight checks
+# =============================================================================
+
+# Check docker daemon access
+if ! docker info &> /dev/null; then
+    echo -e "${RED}Error: Docker daemon is not running or you don't have permission${NC}"
+    echo ""
+    echo "Try:"
+    echo "  sudo systemctl start docker"
+    echo "  sudo usermod -aG docker \$USER && newgrp docker"
+    exit 1
+fi
+
+# Check if setup has been completed
+if [ ! -f ".env" ]; then
+    echo -e "${RED}Error: Configuration not found (.env file missing)${NC}"
+    echo ""
+    echo "It looks like the setup wizard hasn't been run yet."
+    echo "Please run the setup wizard first:"
+    echo ""
+    echo "  ./scripts/setup-wizard.sh"
+    echo ""
+    exit 1
+fi
 
 # Step 1: Pull latest code
 echo -e "${YELLOW}Step 1:${NC} Pulling latest code..."
