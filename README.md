@@ -1,7 +1,5 @@
 # Open5G2GO
 
-**Private Beta - Invite Only**
-
 Homelab toolkit for private 4G cellular networks, combining:
 - **Open5GS** (open-source mobile core) via docker_open5gs
 - **openSurfControl** (web-based management UI)
@@ -167,10 +165,15 @@ cd web_frontend && npm run lint
 
 ## License
 
-Private - Waveriders Collective
+Open5G2GO is licensed under the [GNU Affero General Public License v3.0](LICENSE) (AGPLv3).
+
+Copyright © 2025 Waveriders Collective Inc.
+
+### Contributing
+
+Contributions are welcome! Please read our [Contributing Guide](CONTRIBUTING.md) and sign our [Contributor License Agreement](CLA.md) before submitting a pull request.
 
 ## Support
 
-For beta testers, please report issues to:
-- GitHub Issues (private repo)
-- Waveriders Slack #open5g2go-beta
+- [GitHub Issues](https://github.com/Waveriders-Collective/open5G2GO/issues) - Bug reports and feature requests
+- [GitHub Discussions](https://github.com/Waveriders-Collective/open5G2GO/discussions) - Questions and community support
