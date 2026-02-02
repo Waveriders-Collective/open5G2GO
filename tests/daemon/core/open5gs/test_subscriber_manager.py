@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2025 Waveriders Collective Inc.
+
 import pytest
 from unittest.mock import Mock, MagicMock, patch
 from daemon.core.open5gs.subscriber_manager import SubscriberManager, Open5GSSubscriber

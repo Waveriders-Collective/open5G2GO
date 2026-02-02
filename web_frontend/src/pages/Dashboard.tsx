@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2025 Waveriders Collective Inc.
+
 import React, { useEffect, useState } from 'react';
 import { Users, Activity, Radio, Server, Wifi, WifiOff, AlertTriangle, Cpu } from 'lucide-react';
 import { StatCard, Card, Badge, Table, LoadingSpinner } from '../components/ui';

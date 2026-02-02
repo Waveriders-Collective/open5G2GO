@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2025 Waveriders Collective Inc.
+
 import pytest
 from daemon.core.abstract import CoreAdapter, CoreStatus, RadioSite, Device, Result
 

@@ -1,4 +1,6 @@
 #!/bin/bash
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2025 Waveriders Collective Inc.
 # scripts/setup-wizard.sh - Open5G2GO Interactive Setup Wizard
 # Generates .env file from env.example with user-provided values
 
@@ -10,12 +12,12 @@ PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 cd "$PROJECT_DIR"
 
 # Colors
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-BOLD='\033[1m'
-NC='\033[0m'
+RED='[0;31m'
+GREEN='[0;32m'
+YELLOW='[1;33m'
+BLUE='[0;34m'
+BOLD='[1m'
+NC='[0m'
 
 echo ""
 echo -e "${BOLD}========================================"

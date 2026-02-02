@@ -1,4 +1,6 @@
 #!/bin/bash
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2025 Waveriders Collective Inc.
 # scripts/update.sh - Open5G2GO Update Script
 # Pulls latest code and images, restarts services
 
@@ -10,10 +12,10 @@ PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 cd "$PROJECT_DIR"
 
 # Colors
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BOLD='\033[1m'
-NC='\033[0m'
+GREEN='[0;32m'
+YELLOW='[1;33m'
+BOLD='[1m'
+NC='[0m'
 
 echo ""
 echo -e "${BOLD}========================================"
