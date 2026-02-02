@@ -14,14 +14,19 @@ import os
 MONGODB_URI = os.getenv("MONGODB_URI", "mongodb://localhost:27017")
 MONGODB_DATABASE = "open5gs"
 
-# Network Identity (PLMN 315-010)
-MCC = "315"
-MNC = "010"
-PLMNID = f"{MCC}{MNC}"
+# Network Identity (PLMN) - read from environment
+MCC = os.getenv("MCC", "315")
+MNC = os.getenv("MNC", "010")
 
-# IMSI Format: 315010 + 9 digits (user enters last 4 only)
-# Example: User enters "0001" -> IMSI becomes "315010000000001"
-IMSI_PREFIX = "31501000000"  # User appends 4 digits
+# Handle 2-digit MNC -> 3-digit for IMSI (3GPP compliance)
+# 001-01 -> 001010, 999-99 -> 999990, 315-010 -> 315010
+MNC_IMSI = MNC if len(MNC) == 3 else f"{MNC}0"
+PLMNID = f"{MCC}{MNC_IMSI}"
+
+# IMSI Prefix (deprecated - will be removed in Phase 5)
+# Format: PLMNID + 5 zeros, user appends last 4 digits
+# Example: 315010 + 00000 + 0001 = 315010000000001
+IMSI_PREFIX = f"{PLMNID}00000"
 
 # Default APN
 DEFAULT_APN = "internet"
@@ -38,19 +43,19 @@ DEFAULT_ARP_PRIORITY = 8
 DEFAULT_AMBR_UL = 50000000   # 50 Mbps
 DEFAULT_AMBR_DL = 100000000  # 100 Mbps
 
-# Default Authentication Keys
-# ============================================================================
-# WARNING: THESE ARE DEMO KEYS FOR HOMELAB TESTING ONLY!
-# ============================================================================
-# These keys match the Waveriders SIM template for development/testing.
-# NEVER use these keys in production or public deployments.
-#
-# For production deployments, override with environment variables:
-#   OPEN5GS_DEFAULT_K  - 32-character hex authentication key
-#   OPEN5GS_DEFAULT_OPC - 32-character hex operator key
-# ============================================================================
-DEFAULT_K = os.getenv("OPEN5GS_DEFAULT_K", "465B5CE8B199B49FAA5F0A2EE238A6BC")
-DEFAULT_OPC = os.getenv("OPEN5GS_DEFAULT_OPC", "E8ED289DEBA952E4283B54E88E6183CA")
+# Authentication Keys (REQUIRED - no defaults)
+# These are your SIM authentication keys from your SIM vendor.
+DEFAULT_K = os.getenv("OPEN5GS_DEFAULT_K")
+DEFAULT_OPC = os.getenv("OPEN5GS_DEFAULT_OPC")
+
+
+def validate_auth_keys():
+    """Validate that authentication keys are configured."""
+    if not DEFAULT_K or not DEFAULT_OPC:
+        raise ValueError(
+            "OPEN5GS_DEFAULT_K and OPEN5GS_DEFAULT_OPC environment variables are required. "
+            "These are your SIM authentication keys from your SIM vendor."
+        )
 
 # Open5GS Paths
 OPEN5GS_CONFIG_PATH = os.getenv("OPEN5GS_CONFIG_PATH", "/etc/open5gs")
