@@ -216,8 +216,8 @@ class BaicellsSNMPClient:
     def __init__(
         self,
         community: str = "public",
-        timeout: float = 5.0,
-        retries: int = 2,
+        timeout: float = 2.0,
+        retries: int = 1,
     ):
         """
         Initialize the SNMP client.
