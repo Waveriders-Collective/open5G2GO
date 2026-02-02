@@ -171,11 +171,76 @@ echo ""
 echo -e "SIM keys configured: ${GREEN}OK${NC}"
 
 # =============================================================================
-# Step 4: Docker Configuration
+# Step 4: eNodeB Configuration
 # =============================================================================
 
 echo ""
-echo -e "${BLUE}Step 4: Docker Configuration${NC}"
+echo -e "${BLUE}Step 4: eNodeB Configuration${NC}"
+echo "─────────────────────────────────"
+echo ""
+echo "Configure your Baicells eNodeB for SNMP monitoring and status display."
+echo "You can skip this step and configure later via config/enodebs.yaml."
+echo ""
+
+# Initialize eNodeB array
+declare -a ENODEB_ENTRIES=()
+
+read -p "Configure an eNodeB now? [Y/n]: " configure_enb
+configure_enb="${configure_enb:-Y}"
+
+if [[ "${configure_enb}" =~ ^[Yy] ]]; then
+    while true; do
+        echo ""
+        echo "Enter eNodeB details:"
+
+        # IP Address (required)
+        while true; do
+            read -p "  IP Address: " enb_ip
+            if validate_ip "$enb_ip"; then
+                break
+            else
+                echo -e "${RED}  Invalid IP address format. Please try again.${NC}"
+            fi
+        done
+
+        # Name (required, with default)
+        read -p "  Name (e.g., 'Office-eNB') [eNodeB-1]: " enb_name
+        enb_name="${enb_name:-eNodeB-1}"
+
+        # Serial Number (optional)
+        read -p "  Serial Number (from device label, optional): " enb_serial
+        enb_serial="${enb_serial:-unknown}"
+
+        # Location (optional)
+        read -p "  Location (optional): " enb_location
+        enb_location="${enb_location:-}"
+
+        # Store the entry
+        ENODEB_ENTRIES+=("$enb_ip|$enb_name|$enb_serial|$enb_location")
+
+        echo -e "  ${GREEN}eNodeB added: $enb_name ($enb_ip)${NC}"
+
+        # Ask to add another
+        echo ""
+        read -p "Add another eNodeB? [y/N]: " add_another
+        if [[ ! "${add_another}" =~ ^[Yy] ]]; then
+            break
+        fi
+    done
+
+    echo ""
+    echo -e "eNodeBs configured: ${GREEN}${#ENODEB_ENTRIES[@]}${NC}"
+else
+    echo -e "eNodeB configuration: ${YELLOW}Skipped${NC}"
+    echo "You can configure eNodeBs later by editing config/enodebs.yaml"
+fi
+
+# =============================================================================
+# Step 5: Docker Configuration
+# =============================================================================
+
+echo ""
+echo -e "${BLUE}Step 5: Docker Configuration${NC}"
 echo "─────────────────────────────────"
 echo ""
 
@@ -184,11 +249,11 @@ DOCKER_GID=$(getent group docker 2>/dev/null | cut -d: -f3 || echo "994")
 echo -e "Detected Docker group ID: ${YELLOW}$DOCKER_GID${NC}"
 
 # =============================================================================
-# Step 5: Generate .env file
+# Step 6: Generate .env file
 # =============================================================================
 
 echo ""
-echo -e "${BLUE}Step 5: Generating Configuration${NC}"
+echo -e "${BLUE}Step 6: Generating Configuration${NC}"
 echo "─────────────────────────────────"
 echo ""
 
@@ -281,11 +346,83 @@ EOF
 echo -e "Configuration file generated: ${GREEN}.env${NC}"
 
 # =============================================================================
-# Step 6: Generate FreeDiameter Certificates (Fix #33)
+# Step 7: Generate eNodeB Configuration
 # =============================================================================
 
 echo ""
-echo -e "${BLUE}Step 6: FreeDiameter Certificates${NC}"
+echo -e "${BLUE}Step 7: eNodeB Configuration File${NC}"
+echo "─────────────────────────────────"
+echo ""
+
+ENODEB_CONFIG="$PROJECT_DIR/config/enodebs.yaml"
+
+# Generate enodebs.yaml
+cat > "$ENODEB_CONFIG" << 'ENODEB_HEADER'
+# =============================================================================
+# eNodeB Configuration for Open5G2GO
+# =============================================================================
+#
+# This file defines the Baicells eNodeBs in your deployment and their
+# monitoring configuration for SNMP.
+#
+# Configuration is read at startup. Restart the backend service after changes.
+#
+
+# =============================================================================
+# SNMP Settings
+# =============================================================================
+# SNMP v2c monitoring for Baicells eNodeBs
+# Note: eNodeB must have SNMP enabled and allow queries from the docker host IP
+
+snmp:
+  enabled: true
+  community: "public"
+  timeout_seconds: 2
+  poll_interval_seconds: 30
+
+# =============================================================================
+# eNodeB Definitions
+# =============================================================================
+
+enodebs:
+ENODEB_HEADER
+
+# Add configured eNodeBs or placeholder
+if [ ${#ENODEB_ENTRIES[@]} -gt 0 ]; then
+    for entry in "${ENODEB_ENTRIES[@]}"; do
+        IFS='|' read -r ip name serial location <<< "$entry"
+        cat >> "$ENODEB_CONFIG" << ENODEB_ENTRY
+  - serial_number: "$serial"
+    ip_address: "$ip"
+    name: "$name"
+    location: "$location"
+    enabled: true
+
+ENODEB_ENTRY
+    done
+    echo -e "eNodeB config generated: ${GREEN}${#ENODEB_ENTRIES[@]} eNodeB(s)${NC}"
+else
+    cat >> "$ENODEB_CONFIG" << 'ENODEB_PLACEHOLDER'
+  # No eNodeBs configured during setup.
+  # Add your eNodeB(s) here or via the Web UI (future feature).
+  #
+  # Example:
+  # - serial_number: "120200046421CKY0606"
+  #   ip_address: "192.168.1.100"
+  #   name: "Office-eNB"
+  #   location: "Server Room"
+  #   enabled: true
+
+ENODEB_PLACEHOLDER
+    echo -e "eNodeB config generated: ${YELLOW}No eNodeBs configured${NC}"
+fi
+
+# =============================================================================
+# Step 8: Generate FreeDiameter Certificates
+# =============================================================================
+
+echo ""
+echo -e "${BLUE}Step 8: FreeDiameter Certificates${NC}"
 echo "─────────────────────────────────"
 echo ""
 
@@ -324,11 +461,11 @@ else
 fi
 
 # =============================================================================
-# Step 7: Pre-configure SGWU (Fix #34)
+# Step 9: Pre-configure SGWU
 # =============================================================================
 
 echo ""
-echo -e "${BLUE}Step 7: SGWU Configuration${NC}"
+echo -e "${BLUE}Step 9: SGWU Configuration${NC}"
 echo "─────────────────────────────────"
 echo ""
 
@@ -357,6 +494,7 @@ echo "  Host IP:      $DOCKER_HOST_IP"
 echo "  UE Pool:      $UE_POOL_SUBNET"
 echo "  PLMN:         ${MCC}-${MNC}"
 echo "  SIM Keys:     Configured"
+echo "  eNodeBs:      ${#ENODEB_ENTRIES[@]} configured"
 echo ""
 echo "Next step: Run ./scripts/pull-and-run.sh to start the stack"
 echo ""

@@ -7,6 +7,20 @@ Homelab toolkit for private 4G cellular networks, combining:
 
 ## Quick Start
 
+### Before You Begin
+
+The setup wizard will prompt you for the following information. Have these ready:
+
+| Item | Description | Where to Get It |
+|------|-------------|-----------------|
+| **SIM Ki Key** | 32-character hex authentication key | From your SIM vendor |
+| **SIM OPc Key** | 32-character hex operator key | From your SIM vendor |
+| **PLMN** | Network identity (MCC-MNC) matching your SIMs | Usually 315-010 for US CBRS |
+| **eNodeB IP Address** | Management IP of your Baicells eNodeB | From eNodeB web interface or DHCP |
+| **Host IP Address** | IP of the machine running Open5G2GO | Auto-detected, but verify it's reachable from eNodeB |
+
+**Need SIMs?** Order pre-programmed SIMs with matching Ki/OPc at: https://waveriders.live/sims
+
 ### One-Line Install (Recommended)
 
 ```bash
