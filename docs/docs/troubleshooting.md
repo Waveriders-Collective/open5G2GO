@@ -97,7 +97,7 @@ Use the `-f` flag to follow logs in real-time. Use `--tail=100` to view the last
 To perform a complete reset of the system:
 
 ```bash
-cd ~/openSurfcontrol
+cd ~/open5G2GO
 docker compose -f docker-compose.prod.yml down -v
 ./scripts/pull-and-run.sh
 ```

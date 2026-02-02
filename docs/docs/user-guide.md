@@ -84,15 +84,15 @@ Use the **search box** to filter by name, IMSI, or IP address.
 
 1. Click the **Add Device** button (top right)
 2. Fill in the form:
-   - **Device ID** - Last 4 digits of IMSI (e.g., `0001`)
+   - **IMSI** - Full 15-digit IMSI from your SIM card (e.g., `315010000000001`)
    - **Device Name** - Friendly name (e.g., "Camera 1")
-   - **APN** - Usually leave as "internet"
+   - **IP Address** - Optional, auto-assigned if left blank
 3. Click **Add Device**
 
 The system automatically:
-- Generates the full IMSI (315010000000001 for ID "0001")
-- Assigns the next available static IP
-- Uses default K/OPc authentication keys
+- Validates the 15-digit IMSI format
+- Assigns a static IP from the UE pool (based on last 4 digits of IMSI)
+- Uses the K/OPc authentication keys configured during setup
 
 ### Viewing Device Details
 
@@ -127,14 +127,16 @@ The Network page displays your current network settings (read-only).
 
 ### Network Identity
 
-Core network identifiers:
+Core network identifiers (configured during setup wizard):
 
-| Setting | Description | Default |
+| Setting | Description | Example |
 |---------|-------------|---------|
-| PLMNID | Public Land Mobile Network ID | 315010 |
-| MCC | Mobile Country Code | 315 (US private) |
-| MNC | Mobile Network Code | 010 |
+| PLMNID | Public Land Mobile Network ID | 315010, 001010, 999990 |
+| MCC | Mobile Country Code | 315, 001, 999 |
+| MNC | Mobile Network Code | 010, 01, 99 |
 | TAC | Tracking Area Code | 1 |
+
+**Note:** PLMN is selected during the setup wizard and must match your SIM cards.
 
 ### eNodeB Configuration
 
@@ -211,7 +213,7 @@ Click **Refresh** to update status immediately.
 
 1. Go to **Devices**
 2. Click **Add Device**
-3. Enter the last 4 digits from your SIM card
+3. Enter the full 15-digit IMSI from your SIM card
 4. Give it a friendly name
 5. Click **Add Device**
 6. Insert SIM into your device and power on
@@ -242,4 +244,4 @@ Click **Refresh** to update status immediately.
 - **Auto-refresh**: Dashboard and Services pages refresh every 30 seconds
 - **Manual refresh**: Click the Refresh button on any page for immediate update
 - **Search**: Use the search box on Devices page to quickly find a specific device
-- **IMSI shorthand**: When adding devices, only enter the last 4 digits (the system adds the prefix)
+- **IMSI format**: Always enter the full 15-digit IMSI from your SIM card

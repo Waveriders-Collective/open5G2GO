@@ -19,7 +19,7 @@ The initial release focuses on 4G LTE deployments with these specifications:
 - **Technology**: 4G LTE only
 - **Maximum Devices**: 10 connected devices
 - **Base Station**: Single Baicells eNodeB
-- **Network Identifier (PLMN)**: 315-010
+- **Network Identifier (PLMN)**: Configurable (315-010, 001-01, 999-99, 999-01)
 
 ## Get Started
 
