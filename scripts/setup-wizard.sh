@@ -11,6 +11,12 @@ PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 
 cd "$PROJECT_DIR"
 
+# Ensure we can read from terminal even when piped (e.g., curl | bash)
+# This allows the one-liner install to work with interactive prompts
+if [ ! -t 0 ]; then
+    exec < /dev/tty
+fi
+
 # Colors
 RED='[0;31m'
 GREEN='[0;32m'
