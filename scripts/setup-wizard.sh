@@ -101,11 +101,40 @@ prompt_with_default "UE IP pool subnet" "10.48.99.0/24" "UE_POOL_SUBNET"
 prompt_with_default "UE pool gateway" "10.48.99.1" "UE_POOL_GATEWAY"
 
 # =============================================================================
-# Step 2: SIM Configuration
+# Step 2: PLMN Configuration
 # =============================================================================
 
 echo ""
-echo -e "${BLUE}Step 2: SIM Configuration${NC}"
+echo -e "${BLUE}Step 2: Network Identity (PLMN)${NC}"
+echo "─────────────────────────────────"
+echo ""
+echo "Your PLMN (Public Land Mobile Network) ID must match your SIM cards."
+echo ""
+echo -e "  ${BOLD}[1]${NC} 315-010 - US CBRS Private LTE (default)"
+echo -e "  ${BOLD}[2]${NC} 001-01  - Test Network (sysmocom/programmable SIMs)"
+echo -e "  ${BOLD}[3]${NC} 999-99  - Test Network"
+echo -e "  ${BOLD}[4]${NC} 999-01  - Test Network"
+echo ""
+
+read -p "Choice [1]: " plmn_choice
+plmn_choice="${plmn_choice:-1}"
+
+case "$plmn_choice" in
+    1) MCC="315"; MNC="010" ;;
+    2) MCC="001"; MNC="01" ;;
+    3) MCC="999"; MNC="99" ;;
+    4) MCC="999"; MNC="01" ;;
+    *) MCC="315"; MNC="010" ;;
+esac
+
+echo -e "Selected PLMN: ${GREEN}${MCC}-${MNC}${NC}"
+
+# =============================================================================
+# Step 3: SIM Configuration
+# =============================================================================
+
+echo ""
+echo -e "${BLUE}Step 3: SIM Configuration${NC}"
 echo "─────────────────────────────────"
 echo ""
 echo "Choose your SIM card configuration:"
@@ -143,11 +172,11 @@ else
 fi
 
 # =============================================================================
-# Step 3: GitHub Authentication
+# Step 4: GitHub Authentication
 # =============================================================================
 
 echo ""
-echo -e "${BLUE}Step 3: GitHub Authentication${NC}"
+echo -e "${BLUE}Step 4: GitHub Authentication${NC}"
 echo "─────────────────────────────────"
 echo ""
 echo "Docker images are hosted on GitHub Container Registry (ghcr.io)."
@@ -193,11 +222,11 @@ else
 fi
 
 # =============================================================================
-# Step 4: Docker Configuration
+# Step 5: Docker Configuration
 # =============================================================================
 
 echo ""
-echo -e "${BLUE}Step 4: Docker Configuration${NC}"
+echo -e "${BLUE}Step 5: Docker Configuration${NC}"
 echo "─────────────────────────────────"
 echo ""
 
@@ -206,11 +235,11 @@ DOCKER_GID=$(getent group docker 2>/dev/null | cut -d: -f3 || echo "994")
 echo -e "Detected Docker group ID: ${YELLOW}$DOCKER_GID${NC}"
 
 # =============================================================================
-# Step 5: Generate .env file
+# Step 6: Generate .env file
 # =============================================================================
 
 echo ""
-echo -e "${BLUE}Step 5: Generating Configuration${NC}"
+echo -e "${BLUE}Step 6: Generating Configuration${NC}"
 echo "─────────────────────────────────"
 echo ""
 
@@ -251,11 +280,11 @@ UE_POOL_GATEWAY=${UE_POOL_GATEWAY}
 # PLMN Configuration (Network Identity)
 # =============================================================================
 
-# Mobile Country Code (315 = US private network)
-MCC=315
+# Mobile Country Code
+MCC=${MCC}
 
-# Mobile Network Code (010 = Waveriders test network)
-MNC=010
+# Mobile Network Code
+MNC=${MNC}
 
 # =============================================================================
 # SIM Authentication Keys
@@ -303,11 +332,11 @@ EOF
 echo -e "Configuration file generated: ${GREEN}.env${NC}"
 
 # =============================================================================
-# Step 6: Generate FreeDiameter Certificates (Fix #33)
+# Step 7: Generate FreeDiameter Certificates (Fix #33)
 # =============================================================================
 
 echo ""
-echo -e "${BLUE}Step 6: FreeDiameter Certificates${NC}"
+echo -e "${BLUE}Step 7: FreeDiameter Certificates${NC}"
 echo "─────────────────────────────────"
 echo ""
 
@@ -346,11 +375,11 @@ else
 fi
 
 # =============================================================================
-# Step 7: Pre-configure SGWU (Fix #34)
+# Step 8: Pre-configure SGWU (Fix #34)
 # =============================================================================
 
 echo ""
-echo -e "${BLUE}Step 7: SGWU Configuration${NC}"
+echo -e "${BLUE}Step 8: SGWU Configuration${NC}"
 echo "─────────────────────────────────"
 echo ""
 
@@ -377,6 +406,7 @@ echo ""
 echo "Configuration Summary:"
 echo "  Host IP:      $DOCKER_HOST_IP"
 echo "  UE Pool:      $UE_POOL_SUBNET"
+echo "  PLMN:         ${MCC}-${MNC}"
 echo "  SIM Keys:     ${sim_choice^^} ($([ "${sim_choice^^}" == "W" ] && echo "Waveriders" || echo "Custom"))"
 echo "  GitHub Auth:  $([ "$GITHUB_AUTHENTICATED" == "true" ] && echo "OK" || echo "Skipped")"
 echo ""
