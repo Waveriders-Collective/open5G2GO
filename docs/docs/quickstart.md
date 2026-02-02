@@ -22,7 +22,7 @@ Before you begin, ensure your system meets these requirements:
 For the quickest setup, use the automated installation script:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Waveriders-Collective/openSurfcontrol/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/Waveriders-Collective/open5G2GO/main/install.sh | bash
 ```
 
 This script will handle all setup steps automatically.
@@ -33,8 +33,8 @@ If you prefer manual installation or need more control over the setup process:
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/Waveriders-Collective/openSurfcontrol.git
-   cd openSurfcontrol
+   git clone https://github.com/Waveriders-Collective/open5G2GO.git
+   cd open5G2GO
    ```
 
 2. Run the preflight check to verify your system:
@@ -63,8 +63,8 @@ Once the system is running, you can add your first device:
 3. **Add Device**: Click the "Add Device" button
 
 4. **Enter Device Information**:
-   - Enter the last 4 digits of the IMSI (International Mobile Subscriber Identity)
-   - Example: `0001` for IMSI ending in 0001
+   - **IMSI**: Enter the full 15-digit IMSI from your SIM card (e.g., `315010000000001`)
+   - **Device Name**: Give it a friendly name (e.g., "Camera-01")
 
 5. **Confirm**: The device will appear in the devices list once successfully provisioned
 

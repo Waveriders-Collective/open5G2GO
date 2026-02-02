@@ -10,7 +10,7 @@ Homelab toolkit for private 4G cellular networks, combining:
 ### One-Line Install (Recommended)
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Waveriders-Collective/openSurfcontrol/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/Waveriders-Collective/open5G2GO/main/install.sh | bash
 ```
 
 This will:
@@ -24,8 +24,8 @@ This will:
 
 ```bash
 # Clone repository
-git clone https://github.com/Waveriders-Collective/openSurfcontrol.git
-cd openSurfcontrol
+git clone https://github.com/Waveriders-Collective/open5G2GO.git
+cd open5G2GO
 
 # Run setup
 ./scripts/preflight-check.sh
@@ -44,7 +44,7 @@ cd openSurfcontrol
 ### Updates
 
 ```bash
-cd ~/openSurfcontrol
+cd ~/open5G2GO
 ./scripts/update.sh
 ```
 
@@ -59,7 +59,7 @@ cd ~/openSurfcontrol
 |---------|---------------|
 | Network Type | 4G LTE only |
 | Mobile Core | Open5GS |
-| PLMN | 315-010 (US private network) |
+| PLMN | Configurable (315-010, 001-01, 999-99, 999-01) |
 | Devices | 10 max, static IP assignment |
 | UE IP Pool | 10.48.99.0/24 |
 | QoS Profile | Single profile, best-effort (QCI 9) |
@@ -120,15 +120,25 @@ Single-page application with:
 
 ## SIM Configuration
 
-Waveriders provides pre-programmed SIMs with:
-- PLMN: 315-010
-- IMSI range: 315010000000001 - 315010000009999
+You need pre-programmed SIM cards with Ki and OPc authentication keys.
 
-Users enter only the last 4 digits when adding a device:
+**Requirements:**
+- Ki (Authentication Key) - 32 hex characters
+- OPc (Operator Key) - 32 hex characters
+- IMSI programmed to match your selected PLMN
+
+**Setup Wizard PLMN Options:**
+- 315-010 - US CBRS Private LTE (default)
+- 001-01 - Test Network (sysmocom/programmable SIMs)
+- 999-99 - Test Network
+- 999-01 - Test Network
+
+When adding devices, enter the full 15-digit IMSI from your SIM card:
 ```
-User enters: 0001
-Full IMSI:   315010000000001
+Example: 315010000000001
 ```
+
+Need SIMs? Order pre-programmed SIMs at: https://waveriders.live/sims
 
 ## Development
 
