@@ -1,8 +1,8 @@
-# Surfcontrol Web Frontend
+# Open5G2GO Web Frontend
 
 **React + TypeScript + Tailwind CSS**
 
-Modern, responsive web interface for Attocore 5G/4G mobile core management with Waveriders branding.
+Modern, responsive web interface for Open5GS 4G mobile core management with Waveriders branding.
 
 ---
 
@@ -91,7 +91,7 @@ web_frontend/
 │   ├── services/
 │   │   └── api.ts           # API client (axios)
 │   ├── types/
-│   │   └── attocore.ts      # TypeScript types
+│   │   └── open5gs.ts       # TypeScript types
 │   ├── styles/
 │   │   └── index.css        # Global CSS + Tailwind
 │   ├── App.tsx              # Main app component
@@ -242,7 +242,7 @@ const result = await api.addSubscriber({
 
 ### Type Safety
 
-All API responses have TypeScript types defined in `src/types/attocore.ts`:
+All API responses have TypeScript types defined in `src/types/open5gs.ts`:
 
 ```typescript
 interface ListSubscribersResponse {
@@ -298,7 +298,7 @@ npm run lint
 
 ```bash
 # From project root
-docker build -f Dockerfile.frontend -t surfcontrol-frontend .
+docker build -f Dockerfile.frontend -t open5g2go-frontend .
 ```
 
 ### Run Full Stack with Docker Compose
@@ -435,7 +435,7 @@ npx tsc --noEmit
 **Solutions:**
 ```bash
 # Build with verbose output
-docker build -f Dockerfile.frontend -t surfcontrol-frontend . --progress=plain
+docker build -f Dockerfile.frontend -t open5g2go-frontend . --progress=plain
 
 # Check node_modules are excluded from context
 cat .dockerignore
@@ -456,7 +456,7 @@ cat .dockerignore
 
 ## License
 
-Copyright © 2024 Waveriders. Internal use only.
+Copyright © 2025 Waveriders Collective Inc. Licensed under AGPLv3.
 
 ---
 
