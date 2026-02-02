@@ -5,6 +5,7 @@ description = "Homelab toolkit for private 4G cellular networks with Open5GS"
 authors = ["Waveriders Collective <info@waveriders.io>"]
 packages = [{include = "opensurfcontrol"}, {include = "web_backend"}]
 readme = "README.md"
+license = "AGPL-3.0-or-later"
 
 [tool.poetry.scripts]
 opensurfcontrol = "opensurfcontrol.server:main"
