@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2025 Waveriders Collective Inc.
+
 import { useState, useEffect } from 'react';
 import { api } from '../services/api';
 import type { SystemStatusResponse } from '../types/open5gs';

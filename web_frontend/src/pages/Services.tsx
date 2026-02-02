@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2025 Waveriders Collective Inc.
+
 import React, { useEffect, useState, useCallback } from 'react';
 import { Server, RefreshCw, AlertCircle, CheckCircle, XCircle, HelpCircle } from 'lucide-react';
 import { Card, Badge, LoadingSpinner } from '../components/ui';

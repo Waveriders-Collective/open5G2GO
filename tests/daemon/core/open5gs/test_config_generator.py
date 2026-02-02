@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (c) 2025 Waveriders Collective Inc.
+
 import yaml
 from daemon.core.open5gs.config_generator import Open5GSConfigGenerator
 from daemon.models.schema import (

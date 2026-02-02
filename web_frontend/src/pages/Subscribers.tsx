@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (c) 2025 Waveriders Collective Inc.
+
 import React, { useEffect, useState } from 'react';
 import { UserPlus, RefreshCw, Pencil, Trash2, Eye } from 'lucide-react';
 import { Button, Card, Table, LoadingSpinner, Badge } from '../components/ui';
