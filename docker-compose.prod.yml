@@ -240,6 +240,9 @@ services:
       - APP_NAME=Open5G2GO API
       # Host IP for eNodeB configuration display (Docker host IP that eNodeBs connect to)
       - HOST_IP=${HOST_IP:-10.48.0.110}
+      # SIM authentication keys (configured by setup-wizard)
+      - OPEN5GS_DEFAULT_K=${OPEN5GS_DEFAULT_K}
+      - OPEN5GS_DEFAULT_OPC=${OPEN5GS_DEFAULT_OPC}
       # Google SAS API Configuration (optional - for CBRS grant monitoring)
       # Set GOOGLE_APPLICATION_CREDENTIALS to service account JSON path
       - GOOGLE_APPLICATION_CREDENTIALS=/app/config/sas-service-account.json
