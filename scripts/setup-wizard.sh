@@ -137,39 +137,32 @@ echo ""
 echo -e "${BLUE}Step 3: SIM Configuration${NC}"
 echo "─────────────────────────────────"
 echo ""
-echo "Choose your SIM card configuration:"
+echo "You need pre-programmed SIM cards with Ki and OPc authentication keys."
 echo ""
-echo -e "  ${BOLD}[W]${NC} Waveriders-provided SIMs (default K/OPc keys)"
-echo -e "  ${BOLD}[B]${NC} Bring Your Own SIMs (enter your K/OPc keys)"
+echo "Ki (Authentication Key) and OPc (Operator Key) are cryptographic keys"
+echo "programmed into your SIM cards. Your SIM vendor provides these values."
+echo ""
+echo -e "  Need SIMs? Order at: ${YELLOW}https://waveriders.live/sims${NC}"
+echo ""
+echo "Enter your SIM authentication keys (32 hex characters each):"
 echo ""
 
-read -p "Choice [W/B]: " sim_choice
-sim_choice="${sim_choice:-W}"
+while true; do
+    read -p "  Ki:  " OPEN5GS_DEFAULT_K
+    if validate_hex_key "$OPEN5GS_DEFAULT_K" "Ki"; then
+        break
+    fi
+done
 
-if [[ "${sim_choice^^}" == "B" ]]; then
-    echo ""
-    echo "Enter your SIM authentication keys (32 hex characters each):"
-    echo ""
+while true; do
+    read -p "  OPc: " OPEN5GS_DEFAULT_OPC
+    if validate_hex_key "$OPEN5GS_DEFAULT_OPC" "OPc"; then
+        break
+    fi
+done
 
-    while true; do
-        read -p "Default K: " OPEN5GS_DEFAULT_K
-        if validate_hex_key "$OPEN5GS_DEFAULT_K" "K"; then
-            break
-        fi
-    done
-
-    while true; do
-        read -p "Default OPc: " OPEN5GS_DEFAULT_OPC
-        if validate_hex_key "$OPEN5GS_DEFAULT_OPC" "OPc"; then
-            break
-        fi
-    done
-else
-    # Waveriders defaults
-    OPEN5GS_DEFAULT_K="465B5CE8B199B49FAA5F0A2EE238A6BC"
-    OPEN5GS_DEFAULT_OPC="E8ED289DEBA952E4283B54E88E6183CA"
-    echo -e "Using Waveriders default SIM keys: ${GREEN}OK${NC}"
-fi
+echo ""
+echo -e "SIM keys configured: ${GREEN}OK${NC}"
 
 # =============================================================================
 # Step 4: GitHub Authentication
@@ -407,7 +400,7 @@ echo "Configuration Summary:"
 echo "  Host IP:      $DOCKER_HOST_IP"
 echo "  UE Pool:      $UE_POOL_SUBNET"
 echo "  PLMN:         ${MCC}-${MNC}"
-echo "  SIM Keys:     ${sim_choice^^} ($([ "${sim_choice^^}" == "W" ] && echo "Waveriders" || echo "Custom"))"
+echo "  SIM Keys:     Configured"
 echo "  GitHub Auth:  $([ "$GITHUB_AUTHENTICATED" == "true" ] && echo "OK" || echo "Skipped")"
 echo ""
 echo "Next step: Run ./scripts/pull-and-run.sh to start the stack"
