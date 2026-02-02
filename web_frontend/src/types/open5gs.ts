@@ -98,9 +98,9 @@ export interface NetworkConfigResponse {
   };
 }
 
-// Simplified Add Subscriber for Open5GS with 4-digit IMSI entry
+// Add Subscriber request with full 15-digit IMSI
 export interface AddSubscriberRequest {
-  device_number: string;  // Last 4 digits of IMSI (e.g., "0001")
+  imsi: string;           // Full 15-digit IMSI (e.g., "315010000000001")
   name: string;           // Device name (e.g., "CAM-01")
   ip?: string;            // Optional static IP from 10.48.99.x pool
 }

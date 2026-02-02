@@ -269,7 +269,7 @@ async def add_subscriber(
     **Request Body:**
     ```json
     {
-      "device_number": 1,
+      "imsi": "315010000000001",
       "name": "CAM-01",
       "apn": "internet",
       "ip": "10.48.99.10"
@@ -291,16 +291,15 @@ async def add_subscriber(
     ```
     """
     logger.info(
-        f"Adding subscriber: device_number={request.device_number}, "
+        f"Adding subscriber: imsi={request.imsi}, "
         f"name={request.name}, apn={request.apn}"
     )
 
     result = await service.add_subscriber(
-        device_number=request.device_number,
+        imsi=request.imsi,
         name=request.name,
         apn=request.apn,
-        ip=request.ip,
-        imsi=request.imsi
+        ip=request.ip
     )
 
     # Check if provisioning failed
