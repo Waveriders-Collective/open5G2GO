@@ -165,61 +165,11 @@ echo ""
 echo -e "SIM keys configured: ${GREEN}OK${NC}"
 
 # =============================================================================
-# Step 4: GitHub Authentication
+# Step 4: Docker Configuration
 # =============================================================================
 
 echo ""
-echo -e "${BLUE}Step 4: GitHub Authentication${NC}"
-echo "─────────────────────────────────"
-echo ""
-echo "Docker images are hosted on GitHub Container Registry (ghcr.io)."
-echo "You need a GitHub Personal Access Token (PAT) with 'read:packages' scope."
-echo ""
-echo -e "Create one at: ${YELLOW}https://github.com/settings/tokens/new${NC}"
-echo "Required scope: read:packages"
-echo ""
-
-# Check if already logged in
-if docker pull ghcr.io/waveriders-collective/open5g2go-backend:latest --quiet 2>/dev/null; then
-    echo -e "Already authenticated with ghcr.io: ${GREEN}OK${NC}"
-    GITHUB_AUTHENTICATED=true
-else
-    GITHUB_AUTHENTICATED=false
-
-    read -p "GitHub username: " GITHUB_USER
-
-    if [ -z "$GITHUB_USER" ]; then
-        echo -e "${RED}Error: GitHub username is required${NC}"
-        exit 1
-    fi
-
-    read -s -p "GitHub PAT (hidden): " GITHUB_PAT
-    echo ""
-
-    if [ -z "$GITHUB_PAT" ]; then
-        echo -e "${RED}Error: GitHub PAT is required${NC}"
-        exit 1
-    fi
-
-    echo ""
-    echo "Authenticating with ghcr.io..."
-
-    if echo "$GITHUB_PAT" | docker login ghcr.io -u "$GITHUB_USER" --password-stdin 2>/dev/null; then
-        echo -e "Successfully authenticated with ghcr.io: ${GREEN}OK${NC}"
-        GITHUB_AUTHENTICATED=true
-    else
-        echo -e "${RED}Authentication failed!${NC}"
-        echo "Please check your username and PAT, then try again."
-        exit 1
-    fi
-fi
-
-# =============================================================================
-# Step 5: Docker Configuration
-# =============================================================================
-
-echo ""
-echo -e "${BLUE}Step 5: Docker Configuration${NC}"
+echo -e "${BLUE}Step 4: Docker Configuration${NC}"
 echo "─────────────────────────────────"
 echo ""
 
@@ -228,11 +178,11 @@ DOCKER_GID=$(getent group docker 2>/dev/null | cut -d: -f3 || echo "994")
 echo -e "Detected Docker group ID: ${YELLOW}$DOCKER_GID${NC}"
 
 # =============================================================================
-# Step 6: Generate .env file
+# Step 5: Generate .env file
 # =============================================================================
 
 echo ""
-echo -e "${BLUE}Step 6: Generating Configuration${NC}"
+echo -e "${BLUE}Step 5: Generating Configuration${NC}"
 echo "─────────────────────────────────"
 echo ""
 
@@ -325,11 +275,11 @@ EOF
 echo -e "Configuration file generated: ${GREEN}.env${NC}"
 
 # =============================================================================
-# Step 7: Generate FreeDiameter Certificates (Fix #33)
+# Step 6: Generate FreeDiameter Certificates (Fix #33)
 # =============================================================================
 
 echo ""
-echo -e "${BLUE}Step 7: FreeDiameter Certificates${NC}"
+echo -e "${BLUE}Step 6: FreeDiameter Certificates${NC}"
 echo "─────────────────────────────────"
 echo ""
 
@@ -368,11 +318,11 @@ else
 fi
 
 # =============================================================================
-# Step 8: Pre-configure SGWU (Fix #34)
+# Step 7: Pre-configure SGWU (Fix #34)
 # =============================================================================
 
 echo ""
-echo -e "${BLUE}Step 8: SGWU Configuration${NC}"
+echo -e "${BLUE}Step 7: SGWU Configuration${NC}"
 echo "─────────────────────────────────"
 echo ""
 
@@ -401,7 +351,6 @@ echo "  Host IP:      $DOCKER_HOST_IP"
 echo "  UE Pool:      $UE_POOL_SUBNET"
 echo "  PLMN:         ${MCC}-${MNC}"
 echo "  SIM Keys:     Configured"
-echo "  GitHub Auth:  $([ "$GITHUB_AUTHENTICATED" == "true" ] && echo "OK" || echo "Skipped")"
 echo ""
 echo "Next step: Run ./scripts/pull-and-run.sh to start the stack"
 echo ""
