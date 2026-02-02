@@ -2,7 +2,7 @@
 MongoDB adapter for Open5GS subscriber management.
 
 This module provides the Open5GSClient class that interfaces with Open5GS MongoDB
-to manage subscriber data. It replaces the SSH-based Attocore adapter.
+to manage subscriber data.
 """
 
 from pymongo import MongoClient
