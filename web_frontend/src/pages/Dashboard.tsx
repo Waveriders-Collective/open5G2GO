@@ -1,49 +1,97 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (c) 2025 Waveriders Collective Inc.
 
-import React, { useEffect, useState } from 'react';
-import { Users, Activity, Radio, Server, Wifi, WifiOff, AlertTriangle, Cpu } from 'lucide-react';
+import React, { useEffect, useState, useCallback } from 'react';
+import { Users, Activity, Radio, Server, Wifi, WifiOff, AlertTriangle, Cpu, RefreshCw } from 'lucide-react';
 import { StatCard, Card, Badge, Table, LoadingSpinner } from '../components/ui';
 import { api } from '../services/api';
 import type { SystemStatusResponse, ActiveConnectionsResponse, EnodebStatusResponse, ENodeBStatus, SNMPEnodebStatus } from '../types/open5gs';
 
-export const Dashboard: React.FC = () => {
-  const [status, setStatus] = useState<SystemStatusResponse | null>(null);
-  const [connections, setConnections] = useState<ActiveConnectionsResponse | null>(null);
-  const [enodebStatus, setEnodebStatus] = useState<EnodebStatusResponse | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+// Individual section loading states
+interface SectionState<T> {
+  data: T | null;
+  loading: boolean;
+  error: string | null;
+}
 
-  const fetchData = async () => {
+export const Dashboard: React.FC = () => {
+  // Independent state for each section
+  const [status, setStatus] = useState<SectionState<SystemStatusResponse>>({
+    data: null, loading: true, error: null
+  });
+  const [connections, setConnections] = useState<SectionState<ActiveConnectionsResponse>>({
+    data: null, loading: true, error: null
+  });
+  const [enodebStatus, setEnodebStatus] = useState<SectionState<EnodebStatusResponse>>({
+    data: null, loading: true, error: null
+  });
+
+  // Fetch system status independently
+  const fetchStatus = useCallback(async () => {
+    setStatus(prev => ({ ...prev, loading: true, error: null }));
     try {
-      setLoading(true);
-      setError(null);
-      const [statusData, connectionsData, enodebStatusData] = await Promise.all([
-        api.getSystemStatus(),
-        api.getActiveConnections(),
-        api.getEnodebStatus().catch(() => null), // Gracefully handle if endpoint not available
-      ]);
-      setStatus(statusData);
-      setConnections(connectionsData);
-      setEnodebStatus(enodebStatusData);
+      const data = await api.getSystemStatus();
+      setStatus({ data, loading: false, error: null });
     } catch (err: unknown) {
       const error = err as { response?: { data?: { error?: string } }; message?: string };
-      setError(error.response?.data?.error || error.message || 'Failed to load data');
-    } finally {
-      setLoading(false);
+      setStatus(prev => ({
+        ...prev,
+        loading: false,
+        error: error.response?.data?.error || error.message || 'Failed to load status'
+      }));
     }
-  };
+  }, []);
+
+  // Fetch connections independently
+  const fetchConnections = useCallback(async () => {
+    setConnections(prev => ({ ...prev, loading: true, error: null }));
+    try {
+      const data = await api.getActiveConnections();
+      setConnections({ data, loading: false, error: null });
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { error?: string } }; message?: string };
+      setConnections(prev => ({
+        ...prev,
+        loading: false,
+        error: error.response?.data?.error || error.message || 'Failed to load connections'
+      }));
+    }
+  }, []);
+
+  // Fetch eNodeB status independently (this is the slow one)
+  const fetchEnodebStatus = useCallback(async () => {
+    setEnodebStatus(prev => ({ ...prev, loading: true, error: null }));
+    try {
+      const data = await api.getEnodebStatus();
+      setEnodebStatus({ data, loading: false, error: null });
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { error?: string } }; message?: string };
+      setEnodebStatus(prev => ({
+        ...prev,
+        loading: false,
+        error: error.response?.data?.error || error.message || 'Failed to load eNodeB status'
+      }));
+    }
+  }, []);
+
+  // Fetch all data (called on mount and refresh)
+  const fetchAllData = useCallback(() => {
+    // Fire all fetches in parallel - each updates independently
+    fetchStatus();
+    fetchConnections();
+    fetchEnodebStatus();
+  }, [fetchStatus, fetchConnections, fetchEnodebStatus]);
 
   // Get S1AP connected eNodeBs
   const getEnodebs = (): ENodeBStatus[] => {
-    if (!enodebStatus) return [];
-    return enodebStatus.s1ap.enodebs;
+    if (!enodebStatus.data) return [];
+    return enodebStatus.data.s1ap.enodebs;
   };
 
   // Get SNMP data for an eNodeB by serial number or IP
   const getSNMPStatus = (serial: string, ip?: string): SNMPEnodebStatus | undefined => {
-    if (!enodebStatus?.snmp?.enodebs) return undefined;
-    return enodebStatus.snmp.enodebs.find(
+    if (!enodebStatus.data?.snmp?.enodebs) return undefined;
+    return enodebStatus.data.snmp.enodebs.find(
       e => e.serial_number === serial || e.ip_address === ip
     );
   };
@@ -68,34 +116,25 @@ export const Dashboard: React.FC = () => {
   };
 
   const isEnodebConnected = (serial: string): boolean => {
-    return enodebStatus?.s1ap.enodebs.some(e => e.serial_number === serial) ?? false;
+    return enodebStatus.data?.s1ap.enodebs.some(e => e.serial_number === serial) ?? false;
   };
 
   useEffect(() => {
-    fetchData();
+    fetchAllData();
     // Auto-refresh every 30 seconds
-    const interval = setInterval(fetchData, 30000);
+    const interval = setInterval(fetchAllData, 30000);
     return () => clearInterval(interval);
-  }, []);
+  }, [fetchAllData]);
 
-  if (loading) {
+  // Check if any section has data (to show something rather than full-page spinner)
+  const hasAnyData = status.data || connections.data || enodebStatus.data;
+  const allLoading = status.loading && connections.loading && enodebStatus.loading && !hasAnyData;
+
+  // Show full-page spinner only on initial load when we have nothing
+  if (allLoading) {
     return (
       <div className="flex items-center justify-center h-64">
         <LoadingSpinner size="lg" />
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="bg-red-50 border border-red-200 rounded-lg p-6">
-        <p className="text-red-800 font-body">Error: {error}</p>
-        <button
-          onClick={fetchData}
-          className="mt-4 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 font-body"
-        >
-          Retry
-        </button>
       </div>
     );
   }
@@ -104,68 +143,126 @@ export const Dashboard: React.FC = () => {
     <div className="space-y-8">
       <div className="flex items-center justify-between">
         <h2 className="text-3xl font-heading text-gray-charcoal">System Dashboard</h2>
-        <div className="text-sm text-gray-medium font-body">
-          Last updated: {status?.timestamp || 'N/A'}
+        <div className="flex items-center gap-4">
+          <div className="text-sm text-gray-medium font-body">
+            Last updated: {status.data?.timestamp || 'N/A'}
+          </div>
+          <button
+            onClick={fetchAllData}
+            className="p-2 text-gray-medium hover:text-primary-default rounded-md hover:bg-gray-100"
+            title="Refresh"
+          >
+            <RefreshCw className={`w-4 h-4 ${(status.loading || connections.loading || enodebStatus.loading) ? 'animate-spin' : ''}`} />
+          </button>
         </div>
       </div>
 
-      {/* Stats Grid */}
+      {/* Stats Grid - shows with loading state per-card if needed */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard
-          title="Provisioned Devices"
-          value={status?.subscribers.provisioned || 0}
-          icon={<Users className="w-12 h-12" />}
-        />
-        <StatCard
-          title="Registered UEs"
-          value={status?.subscribers.registered || 0}
-          icon={<Activity className="w-12 h-12" />}
-        />
-        <StatCard
-          title="Connected Devices"
-          value={status?.subscribers.connected || 0}
-          icon={<Radio className="w-12 h-12" />}
-        />
-        <StatCard
-          title="Connected eNodeBs"
-          value={status?.enodebs.total || 0}
-          icon={<Server className="w-12 h-12" />}
-        />
+        {status.loading && !status.data ? (
+          <>
+            <div className="bg-white rounded-lg border border-gray-200 p-6 animate-pulse">
+              <div className="h-12 bg-gray-200 rounded w-1/2 mb-2"></div>
+              <div className="h-8 bg-gray-200 rounded w-1/4"></div>
+            </div>
+            <div className="bg-white rounded-lg border border-gray-200 p-6 animate-pulse">
+              <div className="h-12 bg-gray-200 rounded w-1/2 mb-2"></div>
+              <div className="h-8 bg-gray-200 rounded w-1/4"></div>
+            </div>
+            <div className="bg-white rounded-lg border border-gray-200 p-6 animate-pulse">
+              <div className="h-12 bg-gray-200 rounded w-1/2 mb-2"></div>
+              <div className="h-8 bg-gray-200 rounded w-1/4"></div>
+            </div>
+            <div className="bg-white rounded-lg border border-gray-200 p-6 animate-pulse">
+              <div className="h-12 bg-gray-200 rounded w-1/2 mb-2"></div>
+              <div className="h-8 bg-gray-200 rounded w-1/4"></div>
+            </div>
+          </>
+        ) : status.error ? (
+          <div className="col-span-4 bg-red-50 border border-red-200 rounded-lg p-4">
+            <p className="text-red-800 font-body text-sm">Stats error: {status.error}</p>
+          </div>
+        ) : (
+          <>
+            <StatCard
+              title="Provisioned Devices"
+              value={status.data?.subscribers.provisioned || 0}
+              icon={<Users className="w-12 h-12" />}
+            />
+            <StatCard
+              title="Registered UEs"
+              value={status.data?.subscribers.registered || 0}
+              icon={<Activity className="w-12 h-12" />}
+            />
+            <StatCard
+              title="Connected Devices"
+              value={status.data?.subscribers.connected || 0}
+              icon={<Radio className="w-12 h-12" />}
+            />
+            <StatCard
+              title="Connected eNodeBs"
+              value={status.data?.enodebs.total || 0}
+              icon={<Server className="w-12 h-12" />}
+            />
+          </>
+        )}
       </div>
 
       {/* System Health */}
       <Card title="System Health" subtitle="Open5GS 4G EPC operational status">
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <span className="font-body text-gray-dark">Core Status:</span>
-            <Badge variant={status?.health.core_operational ? 'success' : 'error'}>
-              {status?.health.core_operational ? 'Operational' : 'Down'}
-            </Badge>
+        {status.loading && !status.data ? (
+          <div className="space-y-4 animate-pulse">
+            <div className="h-6 bg-gray-200 rounded w-3/4"></div>
+            <div className="h-6 bg-gray-200 rounded w-2/3"></div>
+            <div className="h-6 bg-gray-200 rounded w-1/2"></div>
           </div>
-          <div className="flex items-center justify-between">
-            <span className="font-body text-gray-dark">eNodeB Connection:</span>
-            <Badge variant={status?.health.enodebs_connected ? 'success' : 'warning'}>
-              {status?.health.enodebs_connected ? 'Connected' : 'Waiting'}
-            </Badge>
+        ) : status.error ? (
+          <p className="text-red-600 font-body text-sm">{status.error}</p>
+        ) : (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <span className="font-body text-gray-dark">Core Status:</span>
+              <Badge variant={status.data?.health.core_operational ? 'success' : 'error'}>
+                {status.data?.health.core_operational ? 'Operational' : 'Down'}
+              </Badge>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="font-body text-gray-dark">eNodeB Connection:</span>
+              <Badge variant={status.data?.health.enodebs_connected ? 'success' : 'warning'}>
+                {status.data?.health.enodebs_connected ? 'Connected' : 'Waiting'}
+              </Badge>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="font-body text-gray-dark">Active Sessions:</span>
+              <Badge variant={status.data?.health.has_active_connections ? 'success' : 'neutral'}>
+                {status.data?.health.has_active_connections ? 'Active' : 'None'}
+              </Badge>
+            </div>
           </div>
-          <div className="flex items-center justify-between">
-            <span className="font-body text-gray-dark">Active Sessions:</span>
-            <Badge variant={status?.health.has_active_connections ? 'success' : 'neutral'}>
-              {status?.health.has_active_connections ? 'Active' : 'None'}
-            </Badge>
-          </div>
-        </div>
+        )}
       </Card>
 
-      {/* eNodeB Status Card */}
+      {/* eNodeB Status Card - loads independently */}
       <Card
         title="eNodeB Status"
         subtitle="LTE base stations with S1AP connection status"
+        action={enodebStatus.loading ? <LoadingSpinner size="sm" /> : undefined}
       >
-        {!enodebStatus ? (
-          <p className="text-center text-gray-medium font-body py-8">
-            Loading eNodeB status...
-          </p>
+        {enodebStatus.loading && !enodebStatus.data ? (
+          <div className="py-8 text-center">
+            <LoadingSpinner size="md" />
+            <p className="mt-2 text-sm text-gray-medium font-body">Loading eNodeB status...</p>
+          </div>
+        ) : enodebStatus.error ? (
+          <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+            <p className="text-amber-800 font-body text-sm">{enodebStatus.error}</p>
+            <button
+              onClick={fetchEnodebStatus}
+              className="mt-2 text-sm text-amber-700 hover:text-amber-900 underline"
+            >
+              Retry
+            </button>
+          </div>
         ) : getEnodebs().length === 0 ? (
           <p className="text-center text-gray-medium font-body py-8">
             No eNodeBs configured
@@ -317,14 +414,24 @@ export const Dashboard: React.FC = () => {
         )}
       </Card>
 
-      {/* Active Connections */}
+      {/* Active Connections - loads independently */}
       <Card
         title="Active Connections"
-        subtitle={`${connections?.total_active || 0} device(s) currently connected`}
+        subtitle={`${connections.data?.total_active || 0} device(s) currently connected`}
+        action={connections.loading ? <LoadingSpinner size="sm" /> : undefined}
       >
-        {connections && connections.total_active > 0 ? (
+        {connections.loading && !connections.data ? (
+          <div className="py-8 text-center">
+            <LoadingSpinner size="md" />
+            <p className="mt-2 text-sm text-gray-medium font-body">Loading connections...</p>
+          </div>
+        ) : connections.error ? (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+            <p className="text-red-800 font-body text-sm">{connections.error}</p>
+          </div>
+        ) : connections.data && connections.data.total_active > 0 ? (
           <Table
-            data={connections.connections}
+            data={connections.data.connections}
             columns={[
               { key: 'name', header: 'Device Name' },
               { key: 'imsi', header: 'IMSI' },
