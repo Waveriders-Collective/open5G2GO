@@ -94,4 +94,5 @@ A successful response indicates the system is operational.
 
 - Review the [User Guide](./user-guide.md) for detailed UI walkthrough
 - See the [eNodeB Setup Guide](./enodeb-setup.md) for base station configuration
+- Read the [Operations Guide](./operations.md) for upgrades and network changes
 - Check [Troubleshooting](./troubleshooting.md) for common issues

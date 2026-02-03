@@ -31,6 +31,69 @@ echo "  Open5G2GO Setup Wizard"
 echo -e "========================================${NC}"
 echo ""
 
+# Setup mode: "full" (default) or "network"
+SETUP_MODE="full"
+
+# =============================================================================
+# Existing Installation Detection
+# =============================================================================
+
+if [ -f ".env" ]; then
+    echo -e "${YELLOW}Existing Open5G2GO configuration detected!${NC}"
+    echo ""
+    echo "What would you like to do?"
+    echo ""
+    echo -e "  ${BOLD}[1]${NC} Full Setup - Complete reconfiguration (backs up existing settings)"
+    echo -e "  ${BOLD}[2]${NC} Network Reconfiguration - Update host IP/network only (preserves SIM, PLMN, eNodeBs)"
+    echo -e "  ${BOLD}[3]${NC} Cancel"
+    echo ""
+
+    read -p "Choice [1]: " setup_choice
+    setup_choice="${setup_choice:-1}"
+
+    case "$setup_choice" in
+        1)
+            SETUP_MODE="full"
+            echo ""
+            echo -e "Selected: ${GREEN}Full Setup${NC}"
+            echo ""
+            ;;
+        2)
+            SETUP_MODE="network"
+            echo ""
+            echo -e "Selected: ${GREEN}Network Reconfiguration${NC}"
+            echo ""
+            # Load existing values from .env to preserve them
+            echo "Loading existing configuration..."
+            source .env
+            PRESERVED_MCC="${MCC}"
+            PRESERVED_MNC="${MNC}"
+            PRESERVED_K="${OPEN5GS_DEFAULT_K}"
+            PRESERVED_OPC="${OPEN5GS_DEFAULT_OPC}"
+            PRESERVED_DOCKER_GID="${DOCKER_GID}"
+            # Load existing eNodeB config path
+            PRESERVED_ENODEB_CONFIG="$PROJECT_DIR/config/enodebs.yaml"
+            echo -e "  PLMN: ${GREEN}${PRESERVED_MCC}-${PRESERVED_MNC}${NC} (preserved)"
+            echo -e "  SIM Keys: ${GREEN}Preserved${NC}"
+            echo -e "  Docker GID: ${GREEN}${PRESERVED_DOCKER_GID}${NC} (preserved)"
+            if [ -f "$PRESERVED_ENODEB_CONFIG" ]; then
+                echo -e "  eNodeB Config: ${GREEN}Preserved${NC}"
+            fi
+            echo ""
+            ;;
+        3)
+            echo "Setup cancelled."
+            exit 0
+            ;;
+        *)
+            SETUP_MODE="full"
+            echo ""
+            echo -e "Selected: ${GREEN}Full Setup${NC}"
+            echo ""
+            ;;
+    esac
+fi
+
 # =============================================================================
 # Helper Functions
 # =============================================================================
@@ -110,143 +173,169 @@ prompt_with_default "UE pool gateway" "10.48.99.1" "UE_POOL_GATEWAY"
 # Step 2: PLMN Configuration
 # =============================================================================
 
-echo ""
-echo -e "${BLUE}Step 2: Network Identity (PLMN)${NC}"
-echo "─────────────────────────────────"
-echo ""
-echo "Your PLMN (Public Land Mobile Network) ID must match your SIM cards."
-echo ""
-echo -e "  ${BOLD}[1]${NC} 315-010 - US CBRS Private LTE (default)"
-echo -e "  ${BOLD}[2]${NC} 001-01  - Test Network (sysmocom/programmable SIMs)"
-echo -e "  ${BOLD}[3]${NC} 999-99  - Test Network"
-echo -e "  ${BOLD}[4]${NC} 999-01  - Test Network"
-echo ""
+if [ "$SETUP_MODE" = "full" ]; then
+    echo ""
+    echo -e "${BLUE}Step 2: Network Identity (PLMN)${NC}"
+    echo "─────────────────────────────────"
+    echo ""
+    echo "Your PLMN (Public Land Mobile Network) ID must match your SIM cards."
+    echo ""
+    echo -e "  ${BOLD}[1]${NC} 315-010 - US CBRS Private LTE (default)"
+    echo -e "  ${BOLD}[2]${NC} 001-01  - Test Network (sysmocom/programmable SIMs)"
+    echo -e "  ${BOLD}[3]${NC} 999-99  - Test Network"
+    echo -e "  ${BOLD}[4]${NC} 999-01  - Test Network"
+    echo ""
 
-read -p "Choice [1]: " plmn_choice
-plmn_choice="${plmn_choice:-1}"
+    read -p "Choice [1]: " plmn_choice
+    plmn_choice="${plmn_choice:-1}"
 
-case "$plmn_choice" in
-    1) MCC="315"; MNC="010" ;;
-    2) MCC="001"; MNC="01" ;;
-    3) MCC="999"; MNC="99" ;;
-    4) MCC="999"; MNC="01" ;;
-    *) MCC="315"; MNC="010" ;;
-esac
+    case "$plmn_choice" in
+        1) MCC="315"; MNC="010" ;;
+        2) MCC="001"; MNC="01" ;;
+        3) MCC="999"; MNC="99" ;;
+        4) MCC="999"; MNC="01" ;;
+        *) MCC="315"; MNC="010" ;;
+    esac
 
-echo -e "Selected PLMN: ${GREEN}${MCC}-${MNC}${NC}"
+    echo -e "Selected PLMN: ${GREEN}${MCC}-${MNC}${NC}"
+else
+    # Network reconfiguration mode - use preserved values
+    MCC="$PRESERVED_MCC"
+    MNC="$PRESERVED_MNC"
+    echo -e "${BLUE}Step 2: Network Identity (PLMN)${NC} - ${GREEN}Preserved${NC} (${MCC}-${MNC})"
+fi
 
 # =============================================================================
 # Step 3: SIM Configuration
 # =============================================================================
 
-echo ""
-echo -e "${BLUE}Step 3: SIM Configuration${NC}"
-echo "─────────────────────────────────"
-echo ""
-echo "You need pre-programmed SIM cards with Ki and OPc authentication keys."
-echo ""
-echo "Ki (Authentication Key) and OPc (Operator Key) are cryptographic keys"
-echo "programmed into your SIM cards. Your SIM vendor provides these values."
-echo ""
-echo -e "  Need SIMs? Order at: ${YELLOW}https://waveriders.live/sims${NC}"
-echo ""
-echo "Enter your SIM authentication keys (32 hex characters each):"
-echo ""
+if [ "$SETUP_MODE" = "full" ]; then
+    echo ""
+    echo -e "${BLUE}Step 3: SIM Configuration${NC}"
+    echo "─────────────────────────────────"
+    echo ""
+    echo "You need pre-programmed SIM cards with Ki and OPc authentication keys."
+    echo ""
+    echo "Ki (Authentication Key) and OPc (Operator Key) are cryptographic keys"
+    echo "programmed into your SIM cards. Your SIM vendor provides these values."
+    echo ""
+    echo -e "  Need SIMs? Order at: ${YELLOW}https://waveriders.live/sims${NC}"
+    echo ""
+    echo "Enter your SIM authentication keys (32 hex characters each):"
+    echo ""
 
-while true; do
-    read -p "  Ki:  " OPEN5GS_DEFAULT_K
-    if validate_hex_key "$OPEN5GS_DEFAULT_K" "Ki"; then
-        break
-    fi
-done
-
-while true; do
-    read -p "  OPc: " OPEN5GS_DEFAULT_OPC
-    if validate_hex_key "$OPEN5GS_DEFAULT_OPC" "OPc"; then
-        break
-    fi
-done
-
-echo ""
-echo -e "SIM keys configured: ${GREEN}OK${NC}"
-
-# =============================================================================
-# Step 4: eNodeB Configuration
-# =============================================================================
-
-echo ""
-echo -e "${BLUE}Step 4: eNodeB Configuration${NC}"
-echo "─────────────────────────────────"
-echo ""
-echo "Configure your Baicells eNodeB for SNMP monitoring and status display."
-echo "You can skip this step and configure later via config/enodebs.yaml."
-echo ""
-
-# Initialize eNodeB array
-declare -a ENODEB_ENTRIES=()
-
-read -p "Configure an eNodeB now? [Y/n]: " configure_enb
-configure_enb="${configure_enb:-Y}"
-
-if [[ "${configure_enb}" =~ ^[Yy] ]]; then
     while true; do
-        echo ""
-        echo "Enter eNodeB details:"
+        read -p "  Ki:  " OPEN5GS_DEFAULT_K
+        if validate_hex_key "$OPEN5GS_DEFAULT_K" "Ki"; then
+            break
+        fi
+    done
 
-        # IP Address (required)
-        while true; do
-            read -p "  IP Address: " enb_ip
-            if validate_ip "$enb_ip"; then
-                break
-            else
-                echo -e "${RED}  Invalid IP address format. Please try again.${NC}"
-            fi
-        done
-
-        # Name (required, with default)
-        read -p "  Name (e.g., 'Office-eNB') [eNodeB-1]: " enb_name
-        enb_name="${enb_name:-eNodeB-1}"
-
-        # Serial Number (optional)
-        read -p "  Serial Number (from device label, optional): " enb_serial
-        enb_serial="${enb_serial:-unknown}"
-
-        # Location (optional)
-        read -p "  Location (optional): " enb_location
-        enb_location="${enb_location:-}"
-
-        # Store the entry
-        ENODEB_ENTRIES+=("$enb_ip|$enb_name|$enb_serial|$enb_location")
-
-        echo -e "  ${GREEN}eNodeB added: $enb_name ($enb_ip)${NC}"
-
-        # Ask to add another
-        echo ""
-        read -p "Add another eNodeB? [y/N]: " add_another
-        if [[ ! "${add_another}" =~ ^[Yy] ]]; then
+    while true; do
+        read -p "  OPc: " OPEN5GS_DEFAULT_OPC
+        if validate_hex_key "$OPEN5GS_DEFAULT_OPC" "OPc"; then
             break
         fi
     done
 
     echo ""
-    echo -e "eNodeBs configured: ${GREEN}${#ENODEB_ENTRIES[@]}${NC}"
+    echo -e "SIM keys configured: ${GREEN}OK${NC}"
 else
-    echo -e "eNodeB configuration: ${YELLOW}Skipped${NC}"
-    echo "You can configure eNodeBs later by editing config/enodebs.yaml"
+    # Network reconfiguration mode - use preserved values
+    OPEN5GS_DEFAULT_K="$PRESERVED_K"
+    OPEN5GS_DEFAULT_OPC="$PRESERVED_OPC"
+    echo -e "${BLUE}Step 3: SIM Configuration${NC} - ${GREEN}Preserved${NC}"
+fi
+
+# =============================================================================
+# Step 4: eNodeB Configuration
+# =============================================================================
+
+# Initialize eNodeB array
+declare -a ENODEB_ENTRIES=()
+
+if [ "$SETUP_MODE" = "full" ]; then
+    echo ""
+    echo -e "${BLUE}Step 4: eNodeB Configuration${NC}"
+    echo "─────────────────────────────────"
+    echo ""
+    echo "Configure your Baicells eNodeB for SNMP monitoring and status display."
+    echo "You can skip this step and configure later via config/enodebs.yaml."
+    echo ""
+
+    read -p "Configure an eNodeB now? [Y/n]: " configure_enb
+    configure_enb="${configure_enb:-Y}"
+
+    if [[ "${configure_enb}" =~ ^[Yy] ]]; then
+        while true; do
+            echo ""
+            echo "Enter eNodeB details:"
+
+            # IP Address (required)
+            while true; do
+                read -p "  IP Address: " enb_ip
+                if validate_ip "$enb_ip"; then
+                    break
+                else
+                    echo -e "${RED}  Invalid IP address format. Please try again.${NC}"
+                fi
+            done
+
+            # Name (required, with default)
+            read -p "  Name (e.g., 'Office-eNB') [eNodeB-1]: " enb_name
+            enb_name="${enb_name:-eNodeB-1}"
+
+            # Serial Number (optional)
+            read -p "  Serial Number (from device label, optional): " enb_serial
+            enb_serial="${enb_serial:-unknown}"
+
+            # Location (optional)
+            read -p "  Location (optional): " enb_location
+            enb_location="${enb_location:-}"
+
+            # Store the entry
+            ENODEB_ENTRIES+=("$enb_ip|$enb_name|$enb_serial|$enb_location")
+
+            echo -e "  ${GREEN}eNodeB added: $enb_name ($enb_ip)${NC}"
+
+            # Ask to add another
+            echo ""
+            read -p "Add another eNodeB? [y/N]: " add_another
+            if [[ ! "${add_another}" =~ ^[Yy] ]]; then
+                break
+            fi
+        done
+
+        echo ""
+        echo -e "eNodeBs configured: ${GREEN}${#ENODEB_ENTRIES[@]}${NC}"
+    else
+        echo -e "eNodeB configuration: ${YELLOW}Skipped${NC}"
+        echo "You can configure eNodeBs later by editing config/enodebs.yaml"
+    fi
+else
+    # Network reconfiguration mode - preserve existing eNodeB config
+    SKIP_ENODEB_GENERATION=true
+    echo -e "${BLUE}Step 4: eNodeB Configuration${NC} - ${GREEN}Preserved${NC}"
 fi
 
 # =============================================================================
 # Step 5: Docker Configuration
 # =============================================================================
 
-echo ""
-echo -e "${BLUE}Step 5: Docker Configuration${NC}"
-echo "─────────────────────────────────"
-echo ""
+if [ "$SETUP_MODE" = "full" ]; then
+    echo ""
+    echo -e "${BLUE}Step 5: Docker Configuration${NC}"
+    echo "─────────────────────────────────"
+    echo ""
 
-# Detect Docker group ID
-DOCKER_GID=$(getent group docker 2>/dev/null | cut -d: -f3 || echo "994")
-echo -e "Detected Docker group ID: ${YELLOW}$DOCKER_GID${NC}"
+    # Detect Docker group ID
+    DOCKER_GID=$(getent group docker 2>/dev/null | cut -d: -f3 || echo "994")
+    echo -e "Detected Docker group ID: ${YELLOW}$DOCKER_GID${NC}"
+else
+    # Network reconfiguration mode - use preserved value
+    DOCKER_GID="$PRESERVED_DOCKER_GID"
+    echo -e "${BLUE}Step 5: Docker Configuration${NC} - ${GREEN}Preserved${NC} (GID: ${DOCKER_GID})"
+fi
 
 # =============================================================================
 # Step 6: Generate .env file
@@ -257,15 +346,8 @@ echo -e "${BLUE}Step 6: Generating Configuration${NC}"
 echo "─────────────────────────────────"
 echo ""
 
-# Check if .env already exists
+# Backup existing .env if present (we already confirmed mode at the start)
 if [ -f ".env" ]; then
-    echo -e "${YELLOW}Warning: .env file already exists${NC}"
-    read -p "Overwrite? [y/N]: " overwrite
-    if [[ ! "${overwrite}" =~ ^[Yy] ]]; then
-        echo "Keeping existing .env file."
-        echo "Setup complete (configuration unchanged)."
-        exit 0
-    fi
     cp .env .env.backup
     echo "Backup saved to .env.backup"
 fi
@@ -356,8 +438,12 @@ echo ""
 
 ENODEB_CONFIG="$PROJECT_DIR/config/enodebs.yaml"
 
-# Generate enodebs.yaml
-cat > "$ENODEB_CONFIG" << 'ENODEB_HEADER'
+# Skip eNodeB generation in network reconfiguration mode
+if [ "$SKIP_ENODEB_GENERATION" = "true" ]; then
+    echo -e "eNodeB config: ${GREEN}Preserved (unchanged)${NC}"
+else
+    # Generate enodebs.yaml
+    cat > "$ENODEB_CONFIG" << 'ENODEB_HEADER'
 # =============================================================================
 # eNodeB Configuration for Open5G2GO
 # =============================================================================
@@ -416,6 +502,7 @@ else
 ENODEB_PLACEHOLDER
     echo -e "eNodeB config generated: ${YELLOW}No eNodeBs configured${NC}"
 fi
+fi  # End of SKIP_ENODEB_GENERATION check
 
 # =============================================================================
 # Step 8: Generate FreeDiameter Certificates
@@ -486,15 +573,30 @@ fi
 
 echo ""
 echo -e "${BOLD}========================================"
-echo "  Setup Complete!"
+if [ "$SETUP_MODE" = "network" ]; then
+    echo "  Network Reconfiguration Complete!"
+else
+    echo "  Setup Complete!"
+fi
 echo -e "========================================${NC}"
 echo ""
 echo "Configuration Summary:"
 echo "  Host IP:      $DOCKER_HOST_IP"
 echo "  UE Pool:      $UE_POOL_SUBNET"
 echo "  PLMN:         ${MCC}-${MNC}"
-echo "  SIM Keys:     Configured"
-echo "  eNodeBs:      ${#ENODEB_ENTRIES[@]} configured"
-echo ""
-echo "Next step: Run ./scripts/pull-and-run.sh to start the stack"
+if [ "$SETUP_MODE" = "network" ]; then
+    echo "  SIM Keys:     Preserved"
+    echo "  eNodeBs:      Preserved"
+    echo ""
+    echo "Network settings updated. Other configuration preserved."
+    echo ""
+    echo "Next step: Restart the stack to apply changes:"
+    echo "  docker compose -f docker-compose.prod.yml down"
+    echo "  ./scripts/pull-and-run.sh"
+else
+    echo "  SIM Keys:     Configured"
+    echo "  eNodeBs:      ${#ENODEB_ENTRIES[@]} configured"
+    echo ""
+    echo "Next step: Run ./scripts/pull-and-run.sh to start the stack"
+fi
 echo ""
