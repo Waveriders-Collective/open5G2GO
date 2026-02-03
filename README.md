@@ -90,8 +90,7 @@ cd ~/open5G2GO
 
 ```
 open5g2go/
-├── opensurfcontrol/      # MCP server + MongoDB adapter
-│   ├── server.py         # MCP tools
+├── opensurfcontrol/      # Core library
 │   ├── mongodb_client.py # Open5GS database adapter
 │   ├── constants.py      # Network configuration
 │   └── ...
@@ -105,16 +104,6 @@ open5g2go/
 ```
 
 ## Components
-
-### openSurfControl (MCP Server)
-Python package providing tools for Open5GS subscriber management:
-- `list_subscribers` - List all provisioned devices
-- `get_subscriber` - Get device details by IMSI
-- `add_subscriber` - Provision new device
-- `update_subscriber` - Update device configuration
-- `delete_subscriber` - Remove device
-- `get_system_status` - System health dashboard
-- `get_network_config` - Network configuration
 
 ### Web Backend (FastAPI)
 REST API exposing subscriber management:
