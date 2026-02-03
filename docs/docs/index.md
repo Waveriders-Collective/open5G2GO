@@ -25,6 +25,11 @@ The initial release focuses on 4G LTE deployments with these specifications:
 
 Ready to build your private network? Check out the [Quick Start Guide](./quickstart.md) to get up and running in minutes.
 
----
+## Documentation
 
-For additional resources, configuration details, and advanced topics, explore the documentation sections in the menu.
+- [Quick Start Guide](./quickstart.md) - Installation and first device setup
+- [User Guide](./user-guide.md) - Web UI walkthrough
+- [eNodeB Setup](./enodeb-setup.md) - Base station configuration
+- [Operations Guide](./operations.md) - Upgrades, network changes, and maintenance
+- [API Reference](./api-reference.md) - REST API documentation
+- [Troubleshooting](./troubleshooting.md) - Common issues and solutions
