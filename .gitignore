@@ -45,3 +45,6 @@ config/sas-service-account.json
 
 # Local docs
 docs/LESSONS_LEARNED.md
+
+# Plans
+plans/
