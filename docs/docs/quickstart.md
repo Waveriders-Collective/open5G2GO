@@ -92,6 +92,6 @@ A successful response indicates the system is operational.
 
 ## Next Steps
 
-- Review the [Configuration Guide](./configuration.md) for advanced setup options
-- Check the [API Documentation](./api.md) for integration details
-- See [Troubleshooting](./troubleshooting.md) for common issues
+- Review the [User Guide](./user-guide.md) for detailed UI walkthrough
+- See the [eNodeB Setup Guide](./enodeb-setup.md) for base station configuration
+- Check [Troubleshooting](./troubleshooting.md) for common issues
