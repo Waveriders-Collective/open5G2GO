@@ -62,8 +62,8 @@ Before configuring your eNodeB, gather the following information:
 |-----------|-------|-------|
 | MME IP Address | Your Docker host IP (e.g., 10.48.0.110) | This is the IP address where your Open5G2GO MME service is running |
 | MME SCTP Port | 36412 | Standard SCTP port for S1AP protocol |
-| MCC (Mobile Country Code) | 315 | Mozambique country code |
-| MNC (Mobile Network Code) | 010 | Mozambique network operator code |
+| MCC (Mobile Country Code) | 315 | US CBRS Private LTE (or your configured MCC) |
+| MNC (Mobile Network Code) | 010 | Private network operator code (or your configured MNC) |
 | TAC (Tracking Area Code) | 1 | Area code for location management |
 
 > **Tip:** To find your Docker host IP, run `hostname -I` on your host machine or check your network configuration. For Docker Desktop, this may be `127.0.0.1` or your machine's local network IP.
@@ -73,16 +73,23 @@ Before configuring your eNodeB, gather the following information:
 ### Access the eNodeB Web Interface
 
 1. Open a web browser
-2. Navigate to the eNodeB's IP address (e.g., `http://192.168.1.100`)
-3. Enter your login credentials (default credentials may vary by firmware version)
+2. Navigate to the eNodeB's IP address (e.g., `http://192.168.150.1`)
+3. Enter your login credentials (default is typically `admin`/`admin`, may vary by firmware version)
 
-### Configure MME Settings
+### Configure via Quick Setting (Baicells)
 
-1. Navigate to **LTE > MME Configuration**
-2. In the MME IP Address field, enter your Docker host IP address
-   - Example: `10.48.0.110`
-3. In the SCTP Port field, enter `36412`
-4. Click **Save** and **Apply** to apply the changes
+For Baicells eNodeBs, the Quick Setting page provides the fastest configuration:
+
+1. Navigate to **Quick Setting**
+2. Enter your PLMN ID (e.g., `315010`) and click the **+** icon to add it
+3. In the **MME IP Address** field, enter your Docker host IP address
+   - Example: `192.168.48.11`
+4. In the **SCTP Port** field, enter `36412`
+5. If necessary, set **TAC** and **S1 port** to match the Network config shown in the SurfControl UI
+6. Click **Save** to apply the changes
+7. Click **admin** in the header and select **Reboot** to apply settings
+
+> **Note:** You may need to remove existing MME IPSEC bindings to update default MME IPs, which are pre-configured for Baicells' Cloud EPC service. Join our Discord community for help with eNodeB configuration.
 
 !!! tip
     The eNodeB will need to establish a network connection to the MME IP address. Ensure that:
@@ -90,25 +97,54 @@ Before configuring your eNodeB, gather the following information:
     - Firewall rules allow traffic on port 36412 (SCTP)
     - The Docker host's firewall is configured to accept S1AP connections
 
-### Configure PLMN Settings
+### Alternative: Manual Configuration
+
+If Quick Setting is not available, configure settings manually:
+
+#### Configure MME Settings
+
+1. Navigate to **LTE > MME Configuration**
+2. In the MME IP Address field, enter your Docker host IP address
+3. In the SCTP Port field, enter `36412`
+4. Click **Save** and **Apply**
+
+#### Configure PLMN Settings
 
 1. Navigate to **LTE > PLMN Configuration**
 2. Set the following parameters:
-   - **MCC (Mobile Country Code):** `315`
-   - **MNC (Mobile Network Code):** `010`
+   - **MCC (Mobile Country Code):** Your configured MCC (e.g., `315`)
+   - **MNC (Mobile Network Code):** Your configured MNC (e.g., `010`)
 3. Enable the PLMN by checking the enable checkbox or toggling the status
 4. Click **Save** and **Apply**
 
 !!! warning
     Ensure the PLMN is enabled after configuration. The eNodeB will not register if the PLMN is disabled.
 
-### Configure TAC (if required)
+#### Configure TAC (if required)
 
 Some eNodeB configurations may require explicit TAC setting:
 
 1. Navigate to **LTE > Cell Configuration** or similar location (varies by firmware)
 2. Set the **TAC (Tracking Area Code)** to `1`
 3. Click **Save** and **Apply**
+
+## SNMP Monitoring Setup (Optional)
+
+SurfControl can read detailed status information from Baicells eNodeBs if SNMP is enabled. This provides enhanced monitoring including RF metrics, traffic statistics, and health indicators on the dashboard.
+
+### Enable SNMP on Baicells eNodeB
+
+1. In the Baicells Management UI, go to **BTS Setting > Management Server**
+2. Set **Source** to `Specific Network`
+3. Set **Source Network** to your LAN subnet (e.g., `192.168.48.0/24`)
+4. Click **Save** and **Apply**
+
+Once configured, the SurfControl dashboard will display detailed eNodeB metrics including:
+- Cell RF status (band, frequency, TX power)
+- Traffic statistics (throughput, PRB usage)
+- Health indicators (CPU, alarms, success rates)
+
+---
 
 ## Verification
 
