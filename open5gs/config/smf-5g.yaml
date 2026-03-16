@@ -19,6 +19,11 @@ smf:
       nrf:
         - uri: http://172.26.0.30:7777
 
+  # GTP-U interface (required by Open5GS even in 5G-only mode)
+  gtpu:
+    server:
+      - address: 172.26.0.14
+
   # PFCP interface to UPF (same as 4G - PFCP is mode-independent)
   pfcp:
     server:
