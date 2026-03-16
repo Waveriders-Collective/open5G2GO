@@ -4,6 +4,11 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      tag_override:
+        description: 'Image tag (leave empty for branch-based tag)'
+        required: false
+        default: ''
 
 env:
   REGISTRY: ghcr.io
@@ -49,7 +54,10 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-${{ matrix.image }}
           tags: |
-            type=raw,value=latest
+            # On main: tag as 'latest'. On branches: tag with branch slug or override.
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+            type=raw,value=${{ inputs.tag_override || '' }},enable=${{ inputs.tag_override != '' }}
+            type=ref,event=branch,enable=${{ github.ref != 'refs/heads/main' && (inputs.tag_override == '' || inputs.tag_override == null) }}
             type=sha,prefix=
 
       - name: Build and push
