@@ -36,6 +36,9 @@ class Settings(BaseSettings):
     # System Configuration
     system_name: str = os.getenv("SYSTEM_NAME", "Open5G2GO")
 
+    # Network Mode: "4g" or "5g"
+    network_mode: str = os.getenv("NETWORK_MODE", "4g")
+
     # Request Timeouts
     api_timeout: int = 30  # seconds
 

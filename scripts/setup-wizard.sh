@@ -141,17 +141,51 @@ detect_host_ip() {
 }
 
 # =============================================================================
-# Step 1: Network Configuration
+# Step 1: Network Mode Selection
 # =============================================================================
 
-echo -e "${BLUE}Step 1: Network Configuration${NC}"
+echo -e "${BLUE}Step 1: Network Mode${NC}"
+echo "─────────────────────────────────"
+echo ""
+echo "Select your network type:"
+echo ""
+echo -e "  ${BOLD}[1]${NC} 4G LTE (default) - For eNodeB base stations"
+echo -e "  ${BOLD}[2]${NC} 5G SA (Standalone) - For gNodeB base stations"
+echo ""
+
+read -p "Choice [1]: " network_mode_choice
+network_mode_choice="${network_mode_choice:-1}"
+
+case "$network_mode_choice" in
+    1) NETWORK_MODE="4g" ;;
+    2) NETWORK_MODE="5g" ;;
+    *) NETWORK_MODE="4g" ;;
+esac
+
+echo -e "Selected: ${GREEN}${NETWORK_MODE}${NC}"
+
+# Set compose file based on mode
+if [ "$NETWORK_MODE" = "5g" ]; then
+    COMPOSE_FILE="docker-compose.5g.prod.yml"
+    RAN_TYPE="gNodeB"
+else
+    COMPOSE_FILE="docker-compose.prod.yml"
+    RAN_TYPE="eNodeB"
+fi
+
+# =============================================================================
+# Step 2: Network Configuration
+# =============================================================================
+
+echo ""
+echo -e "${BLUE}Step 2: Network Configuration${NC}"
 echo "─────────────────────────────────"
 echo ""
 
 # Auto-detect host IP
 DETECTED_IP=$(detect_host_ip)
 echo -e "Detected host IP: ${YELLOW}$DETECTED_IP${NC}"
-echo "This is the IP address your eNodeB will connect to."
+echo "This is the IP address your ${RAN_TYPE} will connect to."
 echo ""
 
 prompt_with_default "Docker host IP" "$DETECTED_IP" "DOCKER_HOST_IP"
@@ -170,12 +204,12 @@ prompt_with_default "UE IP pool subnet" "10.48.99.0/24" "UE_POOL_SUBNET"
 prompt_with_default "UE pool gateway" "10.48.99.1" "UE_POOL_GATEWAY"
 
 # =============================================================================
-# Step 2: PLMN Configuration
+# Step 3: PLMN Configuration
 # =============================================================================
 
 if [ "$SETUP_MODE" = "full" ]; then
     echo ""
-    echo -e "${BLUE}Step 2: Network Identity (PLMN)${NC}"
+    echo -e "${BLUE}Step 3: Network Identity (PLMN)${NC}"
     echo "─────────────────────────────────"
     echo ""
     echo "Your PLMN (Public Land Mobile Network) ID must match your SIM cards."
@@ -202,16 +236,16 @@ else
     # Network reconfiguration mode - use preserved values
     MCC="$PRESERVED_MCC"
     MNC="$PRESERVED_MNC"
-    echo -e "${BLUE}Step 2: Network Identity (PLMN)${NC} - ${GREEN}Preserved${NC} (${MCC}-${MNC})"
+    echo -e "${BLUE}Step 3: Network Identity (PLMN)${NC} - ${GREEN}Preserved${NC} (${MCC}-${MNC})"
 fi
 
 # =============================================================================
-# Step 3: SIM Configuration
+# Step 4: SIM Configuration
 # =============================================================================
 
 if [ "$SETUP_MODE" = "full" ]; then
     echo ""
-    echo -e "${BLUE}Step 3: SIM Configuration${NC}"
+    echo -e "${BLUE}Step 4: SIM Configuration${NC}"
     echo "─────────────────────────────────"
     echo ""
     echo "You need pre-programmed SIM cards with Ki and OPc authentication keys."
@@ -244,87 +278,145 @@ else
     # Network reconfiguration mode - use preserved values
     OPEN5GS_DEFAULT_K="$PRESERVED_K"
     OPEN5GS_DEFAULT_OPC="$PRESERVED_OPC"
-    echo -e "${BLUE}Step 3: SIM Configuration${NC} - ${GREEN}Preserved${NC}"
+    echo -e "${BLUE}Step 4: SIM Configuration${NC} - ${GREEN}Preserved${NC}"
 fi
 
 # =============================================================================
-# Step 4: eNodeB Configuration
+# Step 5: RAN Configuration (eNodeB or gNodeB)
 # =============================================================================
 
-# Initialize eNodeB array
+# Initialize RAN arrays
 declare -a ENODEB_ENTRIES=()
+declare -a GNODEB_ENTRIES=()
 
 if [ "$SETUP_MODE" = "full" ]; then
     echo ""
-    echo -e "${BLUE}Step 4: eNodeB Configuration${NC}"
-    echo "─────────────────────────────────"
-    echo ""
-    echo "Configure your Baicells eNodeB for SNMP monitoring and status display."
-    echo "You can skip this step and configure later via config/enodebs.yaml."
-    echo ""
 
-    read -p "Configure an eNodeB now? [Y/n]: " configure_enb
-    configure_enb="${configure_enb:-Y}"
+    if [ "$NETWORK_MODE" = "5g" ]; then
+        echo -e "${BLUE}Step 5: gNodeB Configuration${NC}"
+        echo "─────────────────────────────────"
+        echo ""
+        echo "Configure your gNodeB for NGAP connection tracking and status display."
+        echo "You can skip this step and configure later via config/gnodebs.yaml."
+        echo ""
 
-    if [[ "${configure_enb}" =~ ^[Yy] ]]; then
-        while true; do
-            echo ""
-            echo "Enter eNodeB details:"
+        read -p "Configure a gNodeB now? [Y/n]: " configure_gnb
+        configure_gnb="${configure_gnb:-Y}"
 
-            # IP Address (required)
+        if [[ "${configure_gnb}" =~ ^[Yy] ]]; then
             while true; do
-                read -p "  IP Address: " enb_ip
-                if validate_ip "$enb_ip"; then
+                echo ""
+                echo "Enter gNodeB details:"
+
+                # IP Address (required)
+                while true; do
+                    read -p "  IP Address: " gnb_ip
+                    if validate_ip "$gnb_ip"; then
+                        break
+                    else
+                        echo -e "${RED}  Invalid IP address format. Please try again.${NC}"
+                    fi
+                done
+
+                # Name (required, with default)
+                read -p "  Name (e.g., 'Lab-gNB') [gNodeB-1]: " gnb_name
+                gnb_name="${gnb_name:-gNodeB-1}"
+
+                # Location (optional)
+                read -p "  Location (optional): " gnb_location
+                gnb_location="${gnb_location:-}"
+
+                # Store the entry
+                GNODEB_ENTRIES+=("$gnb_ip|$gnb_name|$gnb_location")
+
+                echo -e "  ${GREEN}gNodeB added: $gnb_name ($gnb_ip)${NC}"
+
+                # Ask to add another
+                echo ""
+                read -p "Add another gNodeB? [y/N]: " add_another
+                if [[ ! "${add_another}" =~ ^[Yy] ]]; then
                     break
-                else
-                    echo -e "${RED}  Invalid IP address format. Please try again.${NC}"
                 fi
             done
 
-            # Name (required, with default)
-            read -p "  Name (e.g., 'Office-eNB') [eNodeB-1]: " enb_name
-            enb_name="${enb_name:-eNodeB-1}"
-
-            # Serial Number (optional)
-            read -p "  Serial Number (from device label, optional): " enb_serial
-            enb_serial="${enb_serial:-unknown}"
-
-            # Location (optional)
-            read -p "  Location (optional): " enb_location
-            enb_location="${enb_location:-}"
-
-            # Store the entry
-            ENODEB_ENTRIES+=("$enb_ip|$enb_name|$enb_serial|$enb_location")
-
-            echo -e "  ${GREEN}eNodeB added: $enb_name ($enb_ip)${NC}"
-
-            # Ask to add another
             echo ""
-            read -p "Add another eNodeB? [y/N]: " add_another
-            if [[ ! "${add_another}" =~ ^[Yy] ]]; then
-                break
-            fi
-        done
-
-        echo ""
-        echo -e "eNodeBs configured: ${GREEN}${#ENODEB_ENTRIES[@]}${NC}"
+            echo -e "gNodeBs configured: ${GREEN}${#GNODEB_ENTRIES[@]}${NC}"
+        else
+            echo -e "gNodeB configuration: ${YELLOW}Skipped${NC}"
+            echo "You can configure gNodeBs later by editing config/gnodebs.yaml"
+        fi
     else
-        echo -e "eNodeB configuration: ${YELLOW}Skipped${NC}"
-        echo "You can configure eNodeBs later by editing config/enodebs.yaml"
+        echo -e "${BLUE}Step 5: eNodeB Configuration${NC}"
+        echo "─────────────────────────────────"
+        echo ""
+        echo "Configure your Baicells eNodeB for SNMP monitoring and status display."
+        echo "You can skip this step and configure later via config/enodebs.yaml."
+        echo ""
+
+        read -p "Configure an eNodeB now? [Y/n]: " configure_enb
+        configure_enb="${configure_enb:-Y}"
+
+        if [[ "${configure_enb}" =~ ^[Yy] ]]; then
+            while true; do
+                echo ""
+                echo "Enter eNodeB details:"
+
+                # IP Address (required)
+                while true; do
+                    read -p "  IP Address: " enb_ip
+                    if validate_ip "$enb_ip"; then
+                        break
+                    else
+                        echo -e "${RED}  Invalid IP address format. Please try again.${NC}"
+                    fi
+                done
+
+                # Name (required, with default)
+                read -p "  Name (e.g., 'Office-eNB') [eNodeB-1]: " enb_name
+                enb_name="${enb_name:-eNodeB-1}"
+
+                # Serial Number (optional)
+                read -p "  Serial Number (from device label, optional): " enb_serial
+                enb_serial="${enb_serial:-unknown}"
+
+                # Location (optional)
+                read -p "  Location (optional): " enb_location
+                enb_location="${enb_location:-}"
+
+                # Store the entry
+                ENODEB_ENTRIES+=("$enb_ip|$enb_name|$enb_serial|$enb_location")
+
+                echo -e "  ${GREEN}eNodeB added: $enb_name ($enb_ip)${NC}"
+
+                # Ask to add another
+                echo ""
+                read -p "Add another eNodeB? [y/N]: " add_another
+                if [[ ! "${add_another}" =~ ^[Yy] ]]; then
+                    break
+                fi
+            done
+
+            echo ""
+            echo -e "eNodeBs configured: ${GREEN}${#ENODEB_ENTRIES[@]}${NC}"
+        else
+            echo -e "eNodeB configuration: ${YELLOW}Skipped${NC}"
+            echo "You can configure eNodeBs later by editing config/enodebs.yaml"
+        fi
     fi
 else
-    # Network reconfiguration mode - preserve existing eNodeB config
+    # Network reconfiguration mode - preserve existing RAN config
     SKIP_ENODEB_GENERATION=true
-    echo -e "${BLUE}Step 4: eNodeB Configuration${NC} - ${GREEN}Preserved${NC}"
+    SKIP_GNODEB_GENERATION=true
+    echo -e "${BLUE}Step 5: RAN Configuration${NC} - ${GREEN}Preserved${NC}"
 fi
 
 # =============================================================================
-# Step 5: Docker Configuration
+# Step 6: Docker Configuration
 # =============================================================================
 
 if [ "$SETUP_MODE" = "full" ]; then
     echo ""
-    echo -e "${BLUE}Step 5: Docker Configuration${NC}"
+    echo -e "${BLUE}Step 6: Docker Configuration${NC}"
     echo "─────────────────────────────────"
     echo ""
 
@@ -334,15 +426,15 @@ if [ "$SETUP_MODE" = "full" ]; then
 else
     # Network reconfiguration mode - use preserved value
     DOCKER_GID="$PRESERVED_DOCKER_GID"
-    echo -e "${BLUE}Step 5: Docker Configuration${NC} - ${GREEN}Preserved${NC} (GID: ${DOCKER_GID})"
+    echo -e "${BLUE}Step 6: Docker Configuration${NC} - ${GREEN}Preserved${NC} (GID: ${DOCKER_GID})"
 fi
 
 # =============================================================================
-# Step 6: Generate .env file
+# Step 7: Generate .env file
 # =============================================================================
 
 echo ""
-echo -e "${BLUE}Step 6: Generating Configuration${NC}"
+echo -e "${BLUE}Step 7: Generating Configuration${NC}"
 echo "─────────────────────────────────"
 echo ""
 
@@ -358,11 +450,21 @@ cat > .env << EOF
 # Generated by setup-wizard.sh on $(date -Iseconds)
 
 # =============================================================================
+# Network Mode
+# =============================================================================
+
+# Network mode: 4g (LTE EPC) or 5g (SA Core)
+NETWORK_MODE=${NETWORK_MODE}
+
+# Docker Compose file for this mode
+COMPOSE_FILE=${COMPOSE_FILE}
+
+# =============================================================================
 # Network Configuration
 # =============================================================================
 
 # Docker host IP address (the machine running docker-compose)
-# This should be the IP your eNodeB will connect to
+# This should be the IP your ${RAN_TYPE} will connect to
 DOCKER_HOST_IP=${DOCKER_HOST_IP}
 
 # Host IP alias for backend service
@@ -391,11 +493,14 @@ OPEN5GS_DEFAULT_K=${OPEN5GS_DEFAULT_K}
 OPEN5GS_DEFAULT_OPC=${OPEN5GS_DEFAULT_OPC}
 
 # =============================================================================
-# S1AP Configuration (eNodeB Connection)
+# RAN Configuration
 # =============================================================================
 
-# S1AP port for eNodeB connection
+# S1AP port for eNodeB connection (4G)
 S1AP_PORT=36412
+
+# NGAP port for gNodeB connection (5G)
+NGAP_PORT=38412
 
 # GTP-U port for user data
 GTPU_PORT=2152
@@ -421,26 +526,101 @@ DOCKER_GID=${DOCKER_GID}
 # MongoDB Configuration
 # =============================================================================
 
-# MongoDB URI (used by backend and HSS)
+# MongoDB URI (used by backend and HSS/UDR)
 MONGODB_URI=mongodb://mongodb:27017/open5gs
 EOF
 
 echo -e "Configuration file generated: ${GREEN}.env${NC}"
 
+# Update PLMN in the appropriate control plane config
+if [ "$NETWORK_MODE" = "5g" ]; then
+    # Update AMF, NRF PLMN for 5G mode
+    AMF_CONFIG="$PROJECT_DIR/open5gs/config/amf.yaml"
+    if [ -f "$AMF_CONFIG" ]; then
+        sed "s/mcc: \"[^\"]*\"/mcc: \"${MCC}\"/g" "$AMF_CONFIG" > "$AMF_CONFIG.tmp" && mv "$AMF_CONFIG.tmp" "$AMF_CONFIG"
+        sed "s/mnc: \"[^\"]*\"/mnc: \"${MNC}\"/g" "$AMF_CONFIG" > "$AMF_CONFIG.tmp" && mv "$AMF_CONFIG.tmp" "$AMF_CONFIG"
+        echo -e "AMF PLMN configured: ${GREEN}${MCC}-${MNC}${NC}"
+    else
+        echo -e "${YELLOW}Warning: AMF config not found at $AMF_CONFIG${NC}"
+    fi
+
+    NRF_CONFIG="$PROJECT_DIR/open5gs/config/nrf.yaml"
+    if [ -f "$NRF_CONFIG" ]; then
+        sed "s/mcc: \"[^\"]*\"/mcc: \"${MCC}\"/g" "$NRF_CONFIG" > "$NRF_CONFIG.tmp" && mv "$NRF_CONFIG.tmp" "$NRF_CONFIG"
+        sed "s/mnc: \"[^\"]*\"/mnc: \"${MNC}\"/g" "$NRF_CONFIG" > "$NRF_CONFIG.tmp" && mv "$NRF_CONFIG.tmp" "$NRF_CONFIG"
+        echo -e "NRF PLMN configured: ${GREEN}${MCC}-${MNC}${NC}"
+    fi
+else
+    # Update MME PLMN for 4G mode (both gummei.plmn_id and tai.plmn_id sections)
+    MME_CONFIG="$PROJECT_DIR/open5gs/config/mme.yaml"
+    if [ -f "$MME_CONFIG" ]; then
+        sed "s/mcc: \"[^\"]*\"/mcc: \"${MCC}\"/g" "$MME_CONFIG" > "$MME_CONFIG.tmp" && mv "$MME_CONFIG.tmp" "$MME_CONFIG"
+        sed "s/mnc: \"[^\"]*\"/mnc: \"${MNC}\"/g" "$MME_CONFIG" > "$MME_CONFIG.tmp" && mv "$MME_CONFIG.tmp" "$MME_CONFIG"
+        echo -e "MME PLMN configured: ${GREEN}${MCC}-${MNC}${NC}"
+    else
+        echo -e "${YELLOW}Warning: MME config not found at $MME_CONFIG${NC}"
+    fi
+fi
+
 # =============================================================================
-# Step 7: Generate eNodeB Configuration
+# Step 8: Generate RAN Configuration
 # =============================================================================
 
 echo ""
-echo -e "${BLUE}Step 7: eNodeB Configuration File${NC}"
+echo -e "${BLUE}Step 8: RAN Configuration File${NC}"
 echo "─────────────────────────────────"
 echo ""
 
 ENODEB_CONFIG="$PROJECT_DIR/config/enodebs.yaml"
+GNODEB_CONFIG="$PROJECT_DIR/config/gnodebs.yaml"
 
-# Skip eNodeB generation in network reconfiguration mode
-if [ "$SKIP_ENODEB_GENERATION" = "true" ]; then
-    echo -e "eNodeB config: ${GREEN}Preserved (unchanged)${NC}"
+# Generate gNodeB config for 5G mode
+if [ "$NETWORK_MODE" = "5g" ] && [ "$SKIP_GNODEB_GENERATION" != "true" ]; then
+    cat > "$GNODEB_CONFIG" << 'GNODEB_HEADER'
+# =============================================================================
+# gNodeB Configuration for Open5G2GO (5G SA Mode)
+# =============================================================================
+#
+# This file defines the gNodeBs in your 5G SA deployment.
+# Used for NGAP connection tracking and status display.
+#
+# Configuration is read at startup. Restart the backend service after changes.
+#
+
+gnodebs:
+GNODEB_HEADER
+
+    if [ ${#GNODEB_ENTRIES[@]} -gt 0 ]; then
+        for entry in "${GNODEB_ENTRIES[@]}"; do
+            IFS='|' read -r ip name location <<< "$entry"
+            cat >> "$GNODEB_CONFIG" << GNODEB_ENTRY
+  - name: "$name"
+    ip_address: "$ip"
+    location: "$location"
+
+GNODEB_ENTRY
+        done
+        echo -e "gNodeB config generated: ${GREEN}${#GNODEB_ENTRIES[@]} gNodeB(s)${NC}"
+    else
+        cat >> "$GNODEB_CONFIG" << 'GNODEB_PLACEHOLDER'
+  # No gNodeBs configured during setup.
+  # Add your gNodeB(s) here or run the setup wizard again.
+  #
+  # Example:
+  # - name: "gNodeB-1"
+  #   ip_address: "10.48.0.159"
+  #   location: "Test Lab"
+
+GNODEB_PLACEHOLDER
+        echo -e "gNodeB config generated: ${YELLOW}No gNodeBs configured${NC}"
+    fi
+fi
+
+# Skip eNodeB generation in network reconfiguration mode or 5G mode
+if [ "$SKIP_ENODEB_GENERATION" = "true" ] || [ "$NETWORK_MODE" = "5g" ]; then
+    if [ "$NETWORK_MODE" != "5g" ]; then
+        echo -e "eNodeB config: ${GREEN}Preserved (unchanged)${NC}"
+    fi
 else
     # Generate enodebs.yaml
     cat > "$ENODEB_CONFIG" << 'ENODEB_HEADER'
@@ -505,13 +685,17 @@ fi
 fi  # End of SKIP_ENODEB_GENERATION check
 
 # =============================================================================
-# Step 8: Generate FreeDiameter Certificates
+# Step 9: Generate FreeDiameter Certificates (4G only)
 # =============================================================================
 
 echo ""
-echo -e "${BLUE}Step 8: FreeDiameter Certificates${NC}"
+echo -e "${BLUE}Step 9: FreeDiameter Certificates${NC}"
 echo "─────────────────────────────────"
 echo ""
+
+if [ "$NETWORK_MODE" = "5g" ]; then
+    echo -e "FreeDiameter certificates: ${YELLOW}Skipped (not needed for 5G SA)${NC}"
+else
 
 CERT_DIR="$PROJECT_DIR/open5gs/config/freeDiameter"
 
@@ -547,24 +731,39 @@ else
     echo -e "FreeDiameter certificates: ${GREEN}Already exist${NC}"
 fi
 
+fi  # End of 4G-only FreeDiameter section
+
 # =============================================================================
-# Step 9: Pre-configure SGWU
+# Step 10: Pre-configure SGWU / UPF advertise IP
 # =============================================================================
 
 echo ""
-echo -e "${BLUE}Step 9: SGWU Configuration${NC}"
+echo -e "${BLUE}Step 10: GTP-U Advertise Configuration${NC}"
 echo "─────────────────────────────────"
 echo ""
 
-SGWU_CONFIG="$PROJECT_DIR/open5gs/config/sgwu.yaml"
-if [ -f "$SGWU_CONFIG" ]; then
-    echo "Configuring SGWU advertise address..."
-    # Use temp file approach (works on all filesystems including Docker bind mounts)
-    sed "s/advertise:.*/advertise: ${DOCKER_HOST_IP}/" "$SGWU_CONFIG" > "$SGWU_CONFIG.tmp"
-    mv "$SGWU_CONFIG.tmp" "$SGWU_CONFIG"
-    echo -e "SGWU advertise IP: ${GREEN}${DOCKER_HOST_IP}${NC}"
+if [ "$NETWORK_MODE" = "5g" ]; then
+    # 5G: Configure UPF advertise address (gNodeB needs this to send GTP-U)
+    UPF_5G_CONFIG="$PROJECT_DIR/open5gs/config/upf-5g.yaml"
+    if [ -f "$UPF_5G_CONFIG" ]; then
+        echo "Configuring UPF advertise address for gNodeB..."
+        sed "s/advertise:.*/advertise: ${DOCKER_HOST_IP}/" "$UPF_5G_CONFIG" > "$UPF_5G_CONFIG.tmp"
+        mv "$UPF_5G_CONFIG.tmp" "$UPF_5G_CONFIG"
+        echo -e "UPF advertise IP: ${GREEN}${DOCKER_HOST_IP}${NC}"
+    else
+        echo -e "${YELLOW}Warning: UPF 5G config not found at $UPF_5G_CONFIG${NC}"
+    fi
 else
-    echo -e "${YELLOW}Warning: SGWU config not found at $SGWU_CONFIG${NC}"
+    # 4G: Configure SGWU advertise address (eNodeB needs this)
+    SGWU_CONFIG="$PROJECT_DIR/open5gs/config/sgwu.yaml"
+    if [ -f "$SGWU_CONFIG" ]; then
+        echo "Configuring SGWU advertise address..."
+        sed "s/advertise:.*/advertise: ${DOCKER_HOST_IP}/" "$SGWU_CONFIG" > "$SGWU_CONFIG.tmp"
+        mv "$SGWU_CONFIG.tmp" "$SGWU_CONFIG"
+        echo -e "SGWU advertise IP: ${GREEN}${DOCKER_HOST_IP}${NC}"
+    else
+        echo -e "${YELLOW}Warning: SGWU config not found at $SGWU_CONFIG${NC}"
+    fi
 fi
 
 # =============================================================================
@@ -581,21 +780,27 @@ fi
 echo -e "========================================${NC}"
 echo ""
 echo "Configuration Summary:"
+echo "  Mode:         ${NETWORK_MODE^^}"
 echo "  Host IP:      $DOCKER_HOST_IP"
 echo "  UE Pool:      $UE_POOL_SUBNET"
 echo "  PLMN:         ${MCC}-${MNC}"
+echo "  Compose:      $COMPOSE_FILE"
 if [ "$SETUP_MODE" = "network" ]; then
     echo "  SIM Keys:     Preserved"
-    echo "  eNodeBs:      Preserved"
+    echo "  RAN Config:   Preserved"
     echo ""
     echo "Network settings updated. Other configuration preserved."
     echo ""
     echo "Next step: Restart the stack to apply changes:"
-    echo "  docker compose -f docker-compose.prod.yml down"
+    echo "  docker compose -f $COMPOSE_FILE down"
     echo "  ./scripts/pull-and-run.sh"
 else
     echo "  SIM Keys:     Configured"
-    echo "  eNodeBs:      ${#ENODEB_ENTRIES[@]} configured"
+    if [ "$NETWORK_MODE" = "5g" ]; then
+        echo "  gNodeBs:      ${#GNODEB_ENTRIES[@]} configured"
+    else
+        echo "  eNodeBs:      ${#ENODEB_ENTRIES[@]} configured"
+    fi
     echo ""
     echo "Next step: Run ./scripts/pull-and-run.sh to start the stack"
 fi

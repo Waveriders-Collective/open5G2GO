@@ -62,11 +62,28 @@ fi
 # Docker Compose Deployment
 # =============================================================================
 
+# Determine compose file from .env or default
+NETWORK_MODE=$(grep NETWORK_MODE .env 2>/dev/null | cut -d= -f2 || echo "4g")
+COMPOSE_FILE=$(grep COMPOSE_FILE .env 2>/dev/null | cut -d= -f2 || echo "docker-compose.prod.yml")
+
+# Fallback: derive compose file from network mode if not set
+if [ -z "$COMPOSE_FILE" ] || [ ! -f "$COMPOSE_FILE" ]; then
+    if [ "$NETWORK_MODE" = "5g" ]; then
+        COMPOSE_FILE="docker-compose.5g.prod.yml"
+    else
+        COMPOSE_FILE="docker-compose.prod.yml"
+    fi
+fi
+
+echo "Network mode: ${NETWORK_MODE}"
+echo "Compose file: ${COMPOSE_FILE}"
+echo ""
+
 echo "Pulling Docker images from ghcr.io..."
-docker compose -f docker-compose.prod.yml pull
+docker compose -f "$COMPOSE_FILE" pull
 
 echo "Starting Open5G2GO stack..."
-docker compose -f docker-compose.prod.yml up -d
+docker compose -f "$COMPOSE_FILE" up -d
 
 echo "Waiting for services to become healthy..."
 sleep 10
@@ -98,6 +115,14 @@ echo ""
 echo "  Web UI: http://${HOST_IP}:8080"
 echo "  API:    http://${HOST_IP}:8080/api/v1"
 echo ""
-echo "  View logs: docker compose -f docker-compose.prod.yml logs -f"
-echo "  Stop:      docker compose -f docker-compose.prod.yml down"
+if [ "$NETWORK_MODE" = "5g" ]; then
+    echo "  gNodeB NGAP: ${HOST_IP}:38412 (SCTP)"
+    echo "  GTP-U (N3):  ${HOST_IP}:2152 (UDP)"
+else
+    echo "  eNodeB S1AP: ${HOST_IP}:36412 (SCTP)"
+    echo "  GTP-U:       ${HOST_IP}:2152 (UDP)"
+fi
+echo ""
+echo "  View logs: docker compose -f $COMPOSE_FILE logs -f"
+echo "  Stop:      docker compose -f $COMPOSE_FILE down"
 echo ""

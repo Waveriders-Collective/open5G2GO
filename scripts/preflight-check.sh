@@ -58,7 +58,16 @@ check_sctp() {
 check_ports() {
     echo -n "Checking port availability... "
     PORTS_IN_USE=""
-    for PORT in 36412 2152 8080; do
+
+    # Determine which ports to check based on network mode
+    NETWORK_MODE=$(grep NETWORK_MODE .env 2>/dev/null | cut -d= -f2 || echo "4g")
+    if [ "$NETWORK_MODE" = "5g" ]; then
+        CHECK_PORTS="38412 2152 8080"
+    else
+        CHECK_PORTS="36412 2152 8080"
+    fi
+
+    for PORT in $CHECK_PORTS; do
         if ss -tuln | grep -q ":$PORT "; then
             PORTS_IN_USE="$PORTS_IN_USE $PORT"
         fi

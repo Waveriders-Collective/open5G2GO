@@ -72,6 +72,7 @@ class HealthCheckResponse(BaseModel):
     status: str = Field(..., description="API health status")
     version: str = Field(..., description="API version")
     service: str = Field(..., description="Service name")
+    network_mode: str = Field(default="4g", description="Network mode: 4g or 5g")
 
 
 class ErrorResponse(BaseModel):

@@ -1,0 +1,20 @@
+# Open5GS AUSF (Authentication Server Function) Configuration
+# Handles 5G-AKA authentication
+
+logger:
+  file:
+    path: /var/log/open5gs/ausf.log
+  level: info
+
+global:
+  max:
+    ue: 100
+
+ausf:
+  sbi:
+    server:
+      - address: 172.26.0.32
+        port: 7777
+    client:
+      nrf:
+        - uri: http://172.26.0.30:7777

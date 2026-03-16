@@ -57,12 +57,19 @@ def validate_auth_keys():
             "These are your SIM authentication keys from your SIM vendor."
         )
 
+# Network Mode (4g or 5g)
+NETWORK_MODE = os.getenv("NETWORK_MODE", "4g")
+
+# 5G SA Constants
+NGAP_PORT = 38412
+DEFAULT_SST = 1  # Slice/Service Type: eMBB
+
 # Open5GS Paths
 OPEN5GS_CONFIG_PATH = os.getenv("OPEN5GS_CONFIG_PATH", "/etc/open5gs")
 
 # Network Naming
 NETWORK_NAME_SHORT = "Open5G2GO"
-NETWORK_NAME_LONG = "Open5G2GO Private LTE"
+NETWORK_NAME_LONG = "Open5G2GO Private LTE" if NETWORK_MODE == "4g" else "Open5G2GO Private 5G"
 TAC = 1  # Tracking Area Code
 
 # MCP Response Limits

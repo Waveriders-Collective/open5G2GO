@@ -22,6 +22,12 @@ export interface ENodeB {
   name: string;
 }
 
+export interface GNodeB {
+  id: string;
+  ip: string;
+  name: string;
+}
+
 export interface Connection {
   imsi: string;
   name: string;
@@ -49,20 +55,26 @@ export interface ListSubscribersResponse {
 export interface SystemStatusResponse {
   host: string;
   system_name?: string;
+  network_mode?: '4g' | '5g';
   timestamp: string;
   subscribers: {
     provisioned: number;
     registered: number;
     connected: number;
   };
-  enodebs: {
+  enodebs?: {
     total: number;
     list: ENodeB[];
+  };
+  gnodebs?: {
+    total: number;
+    list: GNodeB[];
   };
   health: {
     core_operational: boolean;
     has_active_connections: boolean;
-    enodebs_connected: boolean;
+    enodebs_connected?: boolean;
+    gnodebs_connected?: boolean;
     operational_status: 'fully_operational' | 'core_and_network_ready' | 'core_ready';
   };
 }
@@ -81,9 +93,18 @@ export interface EnodebConfig {
   tac: number;
 }
 
+export interface GnodebConfig {
+  amf_ip: string;
+  amf_port: number;
+  plmn_id: string;
+  tac: number;
+  sst: number;
+}
+
 export interface NetworkConfigResponse {
   host: string;
   timestamp: string;
+  network_mode?: '4g' | '5g';
   network_identity: {
     plmnid: string;
     mcc: string;
@@ -92,6 +113,7 @@ export interface NetworkConfigResponse {
     tac: string;
   };
   enodeb_config?: EnodebConfig;
+  gnodeb_config?: GnodebConfig;
   apns: {
     total: number;
     list: APN[];
@@ -121,6 +143,7 @@ export interface HealthCheckResponse {
   status: string;
   version: string;
   service: string;
+  network_mode?: '4g' | '5g';
 }
 
 export interface ErrorResponse {
@@ -160,6 +183,33 @@ export interface SubscriberOperationResponse {
   timestamp?: string;
   changes?: string[];
   error?: string;
+}
+
+// gNodeB Status types (5G SA)
+export interface GNodeBStatus {
+  config_name: string;
+  location: string;
+  ip_address?: string;
+  port?: number;
+  sctp_streams?: number;
+  connected?: boolean;
+  connected_at?: string;
+}
+
+export interface GnodebStatusResponse {
+  timestamp: string;
+  ngap: {
+    available: boolean;
+    connected_count: number;
+    gnodebs: GNodeBStatus[];
+  };
+  network?: {
+    plmn: string;
+    mcc: string;
+    mnc: string;
+    tac: number;
+    network_name: string;
+  };
 }
 
 // eNodeB Status types

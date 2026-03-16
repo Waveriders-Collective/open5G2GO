@@ -200,8 +200,8 @@ export const Dashboard: React.FC = () => {
               icon={<Radio className="w-12 h-12" />}
             />
             <StatCard
-              title="Connected eNodeBs"
-              value={status.data?.enodebs.total || 0}
+              title={status.data?.network_mode === '5g' ? 'Connected gNodeBs' : 'Connected eNodeBs'}
+              value={(status.data?.network_mode === '5g' ? status.data?.gnodebs?.total : status.data?.enodebs?.total) || 0}
               icon={<Server className="w-12 h-12" />}
             />
           </>
@@ -209,7 +209,7 @@ export const Dashboard: React.FC = () => {
       </div>
 
       {/* System Health */}
-      <Card title="System Health" subtitle="Open5GS 4G EPC operational status">
+      <Card title="System Health" subtitle={`Open5GS ${status.data?.network_mode === '5g' ? '5G SA' : '4G EPC'} operational status`}>
         {status.loading && !status.data ? (
           <div className="space-y-4 animate-pulse">
             <div className="h-6 bg-gray-200 rounded w-3/4"></div>
@@ -227,9 +227,11 @@ export const Dashboard: React.FC = () => {
               </Badge>
             </div>
             <div className="flex items-center justify-between">
-              <span className="font-body text-gray-dark">eNodeB Connection:</span>
-              <Badge variant={status.data?.health.enodebs_connected ? 'success' : 'warning'}>
-                {status.data?.health.enodebs_connected ? 'Connected' : 'Waiting'}
+              <span className="font-body text-gray-dark">
+                {status.data?.network_mode === '5g' ? 'gNodeB Connection:' : 'eNodeB Connection:'}
+              </span>
+              <Badge variant={(status.data?.health.enodebs_connected || status.data?.health.gnodebs_connected) ? 'success' : 'warning'}>
+                {(status.data?.health.enodebs_connected || status.data?.health.gnodebs_connected) ? 'Connected' : 'Waiting'}
               </Badge>
             </div>
             <div className="flex items-center justify-between">

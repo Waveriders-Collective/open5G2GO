@@ -1,0 +1,22 @@
+# Open5GS PCF (Policy Control Function) Configuration
+# Policy control for 5G SA (replaces PCRF from 4G)
+
+logger:
+  file:
+    path: /var/log/open5gs/pcf.log
+  level: info
+
+global:
+  max:
+    ue: 100
+
+pcf:
+  sbi:
+    server:
+      - address: 172.26.0.35
+        port: 7777
+    client:
+      nrf:
+        - uri: http://172.26.0.30:7777
+
+db_uri: mongodb://localhost/open5gs

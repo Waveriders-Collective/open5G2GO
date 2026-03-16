@@ -12,6 +12,16 @@ if [ -f /etc/open5gs/hss.yaml ]; then
     sed -i "s|^db_uri:.*|db_uri: ${DB_URI}|g" /etc/open5gs/hss.yaml 2>/dev/null || true
 fi
 
+# Update UDR config with MongoDB URI (5G subscriber data repository)
+if [ -f /etc/open5gs/udr.yaml ]; then
+    sed -i "s|^db_uri:.*|db_uri: ${DB_URI}|g" /etc/open5gs/udr.yaml 2>/dev/null || true
+fi
+
+# Update PCF config with MongoDB URI (5G policy control)
+if [ -f /etc/open5gs/pcf.yaml ]; then
+    sed -i "s|^db_uri:.*|db_uri: ${DB_URI}|g" /etc/open5gs/pcf.yaml 2>/dev/null || true
+fi
+
 # For UPF: Setup TUN interface if running as upfd
 if [ "$1" = "open5gs-upfd" ]; then
     echo "Setting up UPF networking..."
@@ -70,6 +80,11 @@ if [ "$1" = "open5gs-sgwud" ]; then
         mknod /dev/net/tun c 10 200
         chmod 600 /dev/net/tun
     fi
+fi
+
+# For AMF: Informational startup message (5G)
+if [ "$1" = "open5gs-amfd" ]; then
+    echo "Starting AMF (NGAP on port 38412)..."
 fi
 
 echo "Starting $1..."

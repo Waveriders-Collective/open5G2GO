@@ -68,8 +68,6 @@ SA_5G_SERVICES = [
                 docker_name="open5gs-ausf", process_name="open5gs-ausfd"),
     ServiceInfo("pcf", "PCF (Policy Control Function)", "5G SA Core",
                 docker_name="open5gs-pcf", process_name="open5gs-pcfd"),
-    ServiceInfo("bsf", "BSF (Binding Support Function)", "5G SA Core",
-                docker_name="open5gs-bsf", process_name="open5gs-bsfd"),
     ServiceInfo("nssf", "NSSF (Network Slice Selection Function)", "5G SA Core",
                 docker_name="open5gs-nssf", process_name="open5gs-nssfd"),
 ]
