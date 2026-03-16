@@ -682,14 +682,18 @@ class Open5GSService:
 
     async def get_active_connections(self) -> Dict[str, Any]:
         """
-        Get active UE connections from MME log parsing.
+        Get active UE connections from MME (4G) or AMF (5G) log parsing.
 
         Returns:
             Active connections information with session details.
         """
         try:
-            mme_parser = get_mme_parser()
-            sessions = mme_parser.get_ue_sessions()
+            is_5g = NETWORK_MODE == "5g"
+            if is_5g:
+                parser = get_amf_parser()
+            else:
+                parser = get_mme_parser()
+            sessions = parser.get_ue_sessions()
 
             # Enrich sessions with subscriber info from MongoDB
             enriched_connections = []
@@ -709,15 +713,16 @@ class Open5GSService:
                 except Exception:
                     pass
 
-                # Map to frontend expected field names
-                state = session.get("state", "attached")
-                cm_state = "CONNECTED" if state == "attached" else "IDLE"
+                # Normalize field names: 5G uses "dnn"/"registered", 4G uses "apn"/"attached"
+                apn = session.get("apn") or session.get("dnn", "internet")
+                state = session.get("state", "")
+                cm_state = "CONNECTED" if state in ("attached", "registered") else "IDLE"
 
                 enriched_connections.append({
                     "imsi": imsi,
                     "name": device_name or f"Device-{imsi[-4:]}",
                     "ip": session.get("ip_address"),
-                    "apn": session.get("apn", "internet"),
+                    "apn": apn,
                     "cm_state": cm_state,
                     "attached_at": session.get("attached_at"),
                 })
