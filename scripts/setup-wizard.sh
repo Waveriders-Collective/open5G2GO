@@ -427,6 +427,16 @@ EOF
 
 echo -e "Configuration file generated: ${GREEN}.env${NC}"
 
+# Update mme.yaml PLMN (both gummei.plmn_id and tai.plmn_id sections)
+MME_CONFIG="$PROJECT_DIR/open5gs/config/mme.yaml"
+if [ -f "$MME_CONFIG" ]; then
+    sed "s/mcc: \"[^\"]*\"/mcc: \"${MCC}\"/g" "$MME_CONFIG" > "$MME_CONFIG.tmp" && mv "$MME_CONFIG.tmp" "$MME_CONFIG"
+    sed "s/mnc: \"[^\"]*\"/mnc: \"${MNC}\"/g" "$MME_CONFIG" > "$MME_CONFIG.tmp" && mv "$MME_CONFIG.tmp" "$MME_CONFIG"
+    echo -e "MME PLMN configured: ${GREEN}${MCC}-${MNC}${NC}"
+else
+    echo -e "${YELLOW}Warning: MME config not found at $MME_CONFIG${NC}"
+fi
+
 # =============================================================================
 # Step 7: Generate eNodeB Configuration
 # =============================================================================
