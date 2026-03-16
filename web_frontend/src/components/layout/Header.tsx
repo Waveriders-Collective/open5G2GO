@@ -29,13 +29,18 @@ export const Header: React.FC = () => {
     if (loading) return 'Loading system status...';
     if (error) return 'Connection Error - Cannot reach Open5GS';
 
+    const is5g = status?.network_mode === '5g';
+    const ranTotal = is5g ? (status?.gnodebs?.total ?? 0) : (status?.enodebs?.total ?? 0);
+    const ranLabel = is5g ? 'gNodeB' : 'eNodeB';
+    const coreLabel = is5g ? '5G' : '4G';
+
     switch (status?.health.operational_status) {
       case 'fully_operational':
         return `Fully Operational - ${status.subscribers.connected} devices connected`;
       case 'core_and_network_ready':
-        return `4G Core and Network Ready - ${status.enodebs.total} eNodeB(s) connected`;
+        return `${coreLabel} Core and Network Ready - ${ranTotal} ${ranLabel}(s) connected`;
       case 'core_ready':
-        return '4G Core Ready - Waiting for eNodeB connection';
+        return `${coreLabel} Core Ready - Waiting for ${ranLabel} connection`;
       default:
         return 'Core Down';
     }
