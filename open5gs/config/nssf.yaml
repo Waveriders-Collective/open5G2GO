@@ -18,9 +18,7 @@ nssf:
     client:
       nrf:
         - uri: http://172.26.0.30:7777
-
-  nsi:
-    - addr: 172.26.0.30
-      port: 7777
-      s_nssai:
-        sst: 1
+      nsi:
+        - uri: http://172.26.0.30:7777
+          s_nssai:
+            sst: 1

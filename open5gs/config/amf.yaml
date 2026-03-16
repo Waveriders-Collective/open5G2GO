@@ -59,3 +59,7 @@ amf:
     short: O5G2GO
 
   amf_name: open5g2go-amf
+
+  time:
+    t3512:
+      value: 540  # Periodic registration timer in seconds
