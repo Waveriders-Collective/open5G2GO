@@ -34,7 +34,6 @@ export const Dashboard: React.FC = () => {
 
   // Active RAN status (whichever mode is active)
   const ranLoading = is5g ? gnodebStatus.loading : enodebStatus.loading;
-  const ranError = is5g ? gnodebStatus.error : enodebStatus.error;
   const ranHasData = is5g ? gnodebStatus.data : enodebStatus.data;
 
   // Fetch system status independently
