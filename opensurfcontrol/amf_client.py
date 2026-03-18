@@ -106,19 +106,21 @@ AMF_SESSION_COUNT_PATTERN = re.compile(
     r"\[(Added|Removed)\] Number of AMF-Sessions is now (\d+)"
 )
 
-# Pattern: [315010000000010] Registration request or Registration accept
+# Pattern: [imsi-999700308170001] Registration complete (or Registration request)
+# Also handles legacy format: [315010000000010] Registration accept
 REGISTRATION_EVENT_PATTERN = re.compile(
-    r"\[(\d{15})\]\s+(Registration request|Registration accept)"
+    r"\[(?:imsi-)?(\d{15})\]\s+(Registration request|Registration accept|Registration complete)"
 )
 
-# Pattern: [315010000000010] De-registration request
+# Pattern: [imsi-999700308170001] Deregistration request
+# Also handles legacy format: [315010000000010] De-registration request
 DEREGISTRATION_EVENT_PATTERN = re.compile(
-    r"\[(\d{15})\]\s+De-registration request"
+    r"\[(?:imsi-)?(\d{15})\]\s+De-?registration request"
 )
 
-# Pattern: IMSI[315010000000010] or SUCI[...]
+# Pattern: IMSI[315010000000010] or imsi-999700308170001 in brackets
 IMSI_PATTERN = re.compile(
-    r"IMSI\[(\d{15})\]"
+    r"(?:IMSI\[(\d{15})\]|\[imsi-(\d{15})\])"
 )
 
 # Pattern: RAN_UE_NGAP_ID[167] AMF_UE_NGAP_ID[36]
@@ -264,7 +266,7 @@ class AMFLogParser:
                 imsi_match = IMSI_PATTERN.search(line)
 
                 if context_match and imsi_match:
-                    imsi = imsi_match.group(1)
+                    imsi = imsi_match.group(1) or imsi_match.group(2)
                     ran_id = int(context_match.group(1))
                     amf_id = int(context_match.group(2))
                     pending_context[imsi] = (ran_id, amf_id)
@@ -279,7 +281,7 @@ class AMFLogParser:
 
                     if event_type == "Registration request":
                         sessions[imsi].state = "registering"
-                    elif event_type == "Registration accept":
+                    elif event_type in ("Registration accept", "Registration complete"):
                         sessions[imsi].state = "registered"
                         sessions[imsi].attached_at = timestamp
 
