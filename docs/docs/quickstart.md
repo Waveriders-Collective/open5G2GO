@@ -11,7 +11,8 @@ Before you begin, ensure your system meets these requirements:
 - **Docker Compose**: v2 or later
 - **Disk Space**: At least 5GB free space
 - **Network Ports**: The following ports must be available:
-  - `36412/sctp` - SCTP traffic
+  - `36412/sctp` - S1AP traffic (4G mode)
+  - `38412/sctp` - NGAP traffic (5G mode)
   - `2152/udp` - GTP-U traffic
   - `8080/tcp` - Web UI and API
 
@@ -42,7 +43,7 @@ If you prefer manual installation or need more control over the setup process:
    ./scripts/preflight-check.sh
    ```
 
-3. Run the setup wizard:
+3. Run the setup wizard (you will be prompted to choose 4G or 5G mode):
    ```bash
    ./scripts/setup-wizard.sh
    ```
@@ -90,9 +91,28 @@ curl http://localhost:8080/api/v1/health
 
 A successful response indicates the system is operational.
 
+### Firewall Rules
+
+Depending on your chosen network mode, ensure the appropriate ports are open:
+
+**4G LTE mode:**
+```bash
+sudo ufw allow 36412/sctp   # S1AP (eNodeB → MME)
+sudo ufw allow 2152/udp     # GTP-U
+sudo ufw allow 8080/tcp     # Web UI
+```
+
+**5G SA mode:**
+```bash
+sudo ufw allow 38412/sctp   # NGAP (gNodeB → AMF)
+sudo ufw allow 2152/udp     # GTP-U
+sudo ufw allow 8080/tcp     # Web UI
+```
+
 ## Next Steps
 
 - Review the [User Guide](./user-guide.md) for detailed UI walkthrough
-- See the [eNodeB Setup Guide](./enodeb-setup.md) for base station configuration
+- See the [eNodeB Setup Guide](./enodeb-setup.md) for 4G base station configuration
+- See the [gNodeB Setup Guide](./gnodeb-setup.md) for 5G base station configuration
 - Read the [Operations Guide](./operations.md) for upgrades and network changes
 - Check [Troubleshooting](./troubleshooting.md) for common issues

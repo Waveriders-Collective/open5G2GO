@@ -95,10 +95,11 @@ Select option **2** for Network Reconfiguration.
 |---------|------------------|------------|
 | Docker Host IP | Updated | Updated |
 | UE Pool Subnet | Updated | Updated |
-| SGWU Advertise IP | Updated | Updated |
+| SGWU/UPF Advertise IP | Updated | Updated |
+| Network Mode (4G/5G) | Preserved | Updated |
 | PLMN (MCC/MNC) | Preserved | Updated |
 | SIM Keys (Ki/OPc) | Preserved | Updated |
-| eNodeB Config | Preserved | Updated |
+| eNodeB/gNodeB Config | Preserved | Updated |
 | Docker GID | Preserved | Updated |
 
 ### After Network Reconfiguration
@@ -114,13 +115,22 @@ The `pull-and-run.sh` script will:
 1. Reapply host networking rules (IP forwarding, routes, NAT)
 2. Start all services with the new configuration
 
-### Update eNodeB Configuration
+### Update eNodeB Configuration (4G Mode)
 
 After changing the host IP, update your eNodeB to connect to the new IP:
 
 1. Access your eNodeB management interface
 2. Update the MME IP address to your new `DOCKER_HOST_IP`
 3. The eNodeB should reconnect automatically
+
+### Update gNodeB Configuration (5G Mode)
+
+After changing the host IP, update your gNodeB to connect to the new IP:
+
+1. Access your gNodeB management interface
+2. Update the AMF IP address to your new `DOCKER_HOST_IP`
+3. The NGAP port remains 38412
+4. The gNodeB should reconnect automatically
 
 ## Full Reconfiguration
 
@@ -130,7 +140,8 @@ Use full setup when you need to change settings that network reconfiguration pre
 
 - Changing PLMN (MCC/MNC) for different SIM cards
 - Updating SIM authentication keys (Ki/OPc)
-- Reconfiguring eNodeBs from scratch
+- Switching between 4G and 5G network modes
+- Reconfiguring eNodeBs/gNodeBs from scratch
 - Starting fresh with new settings
 
 ### Running Full Setup
@@ -170,6 +181,7 @@ Understanding what data persists across different operations helps you plan main
 | Open5GS Logs | Files | `open5gs_logs` volume | Yes | Yes |
 | Configuration | .env file | Project root | Yes | Updated |
 | eNodeB Config | YAML file | `config/enodebs.yaml` | Yes | Preserved* |
+| gNodeB Config | YAML file | `config/gnodebs.yaml` | Yes | Preserved* |
 | FreeDiameter Certs | PEM files | `open5gs/config/freeDiameter/` | Yes | Yes |
 
 *Network reconfiguration preserves eNodeB config; full setup regenerates it.
@@ -194,8 +206,9 @@ Before major changes, back up your data:
 # Backup .env
 cp .env .env.backup.$(date +%Y%m%d)
 
-# Backup eNodeB config
+# Backup base station configs
 cp config/enodebs.yaml config/enodebs.yaml.backup.$(date +%Y%m%d)
+cp config/gnodebs.yaml config/gnodebs.yaml.backup.$(date +%Y%m%d) 2>/dev/null
 
 # Backup MongoDB (while running)
 docker compose -f docker-compose.prod.yml exec mongodb mongodump --out /dump

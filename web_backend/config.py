@@ -17,7 +17,7 @@ class Settings(BaseSettings):
 
     # API Configuration
     app_name: str = "Open5G2GO Web API"
-    app_version: str = "0.1.0"
+    app_version: str = "0.2.0"
     api_prefix: str = "/api/v1"
     debug: bool = os.getenv("DEBUG", "false").lower() == "true"
 
