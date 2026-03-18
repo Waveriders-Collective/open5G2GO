@@ -767,9 +767,15 @@ echo "────────────────────────�
 echo ""
 
 if [ "$NETWORK_MODE" = "5g" ]; then
-    # 5G: UPF runs in host mode — no advertise IP needed.
-    # GTP-U binds to 0.0.0.0 and the gNodeB connects to the real host IP directly.
-    echo -e "UPF GTP-U advertise: ${GREEN}Not needed (host mode — gNodeB uses host IP directly)${NC}"
+    # 5G: UPF runs in host mode but still needs advertise IP so the SMF
+    # tells the gNB the correct GTP-U endpoint (not 0.0.0.0)
+    UPF_HOST_CONFIG="$PROJECT_DIR/open5gs/config/upf-5g-host.yaml"
+    if [ -f "$UPF_HOST_CONFIG" ]; then
+        echo "Configuring UPF GTP-U advertise address for gNodeB..."
+        sed "s/advertise:.*/advertise: ${DOCKER_HOST_IP}/" "$UPF_HOST_CONFIG" > "$UPF_HOST_CONFIG.tmp"
+        mv "$UPF_HOST_CONFIG.tmp" "$UPF_HOST_CONFIG"
+        echo -e "UPF GTP-U advertise: ${GREEN}${DOCKER_HOST_IP}${NC}"
+    fi
     echo -e "AMF NGAP: ${GREEN}Host mode on 0.0.0.0:38412${NC}"
 else
     # 4G: Configure SGWU advertise address (eNodeB needs this)

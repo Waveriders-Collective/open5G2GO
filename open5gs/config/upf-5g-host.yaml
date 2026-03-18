@@ -2,7 +2,7 @@
 # HOST MODE variant - UPF runs with network_mode: host
 # PFCP binds to Docker bridge gateway (reachable from SMF on bridge)
 # GTP-U binds to all interfaces (gNodeB sends directly to host IP)
-# No 'advertise' needed - the real host IP IS the bind address
+# advertise must be set to the real host IP so the gNB knows where to send GTP-U
 
 logger:
   file:
@@ -26,7 +26,7 @@ upf:
   gtpu:
     server:
       - address: 0.0.0.0
-        # No advertise needed in host mode - gNodeB connects to real host IP
+        advertise: 192.168.8.5
 
   # UE IP pool and TUN interface
   session:
