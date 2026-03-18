@@ -132,6 +132,54 @@ docker compose -f docker-compose.5g.prod.yml restart nrf
 docker compose -f docker-compose.5g.prod.yml restart amf smf upf udm udr ausf pcf nssf
 ```
 
+## 5G UE Authentication Failures
+
+**Symptom:** AMF logs show `Authentication failure [21]` (MAC failure)
+
+This usually means a **SQN desync** — the SIM's sequence number is ahead of the core's. This happens when the subscriber database is reset but the SIM retains its counter.
+
+**Fix:** Toggle airplane mode on the UE. The SIM will send an AUTS resynchronization token and the core will recover automatically on the next attempt.
+
+If auth continues to fail, verify:
+- Ki and OPc keys match between the SIM and subscriber record
+- The `op_type` is correct (OPc vs OP)
+
+## 5G Downlink Data Not Reaching UE
+
+**Symptom:** UE registers and gets an IP, uplink works (DNS queries leave UE), but no downlink data arrives at the UE
+
+**Checks:**
+
+1. Verify GTP-U is flowing in both directions:
+   ```bash
+   sudo tcpdump -i <interface> 'udp port 2152' -n -c 10
+   ```
+   You should see packets in both directions between the host and gNodeB.
+
+2. If downlink GTP-U reaches the gNodeB but data doesn't reach the UE, check:
+   - **gNodeB N2/N3 IPs**: Some gNodeBs require separate IPs for signaling (N2) and user plane (N3). If both are on the same IP, downlink may silently fail.
+   - **UPF advertise address**: Verify the UPF config has the correct host IP in the `advertise` field, not `0.0.0.0`.
+   - **Firmware**: Update gNodeB firmware to the latest version.
+
+3. If no downlink GTP-U leaves the host at all:
+   ```bash
+   sudo iptables -L FORWARD -n -v   # Check FORWARD chain for drops
+   sudo iptables -t nat -L POSTROUTING -n -v   # Check NAT rules
+   ```
+
+## LAN Hosts Cannot Reach UE Devices
+
+**Symptom:** The core host can ping a UE (e.g., 10.48.99.100) but other LAN hosts cannot
+
+**Fix:** Add a static route on your LAN router pointing the UE subnet at the core host:
+
+```
+# On your router (example for core host at 192.168.8.5):
+ip route add 10.48.99.0/24 via 192.168.8.5
+```
+
+The core host's UPF entrypoint automatically configures NAT exceptions for LAN traffic so that UE source IPs are preserved.
+
 ## Full Reset
 
 !!! warning "Destructive Operation"

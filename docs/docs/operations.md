@@ -200,6 +200,9 @@ docker volume inspect open5g2go_mongodb_data
 
 ### Backing Up Data
 
+!!! warning "Always Back Up Before Destructive Operations"
+    Always back up the subscriber database before running `docker compose down -v` or any operation that removes Docker volumes. Subscriber records (IMSIs, authentication keys, session data) cannot be recovered from config files alone.
+
 Before major changes, back up your data:
 
 ```bash
@@ -210,9 +213,13 @@ cp .env .env.backup.$(date +%Y%m%d)
 cp config/enodebs.yaml config/enodebs.yaml.backup.$(date +%Y%m%d)
 cp config/gnodebs.yaml config/gnodebs.yaml.backup.$(date +%Y%m%d) 2>/dev/null
 
-# Backup MongoDB (while running)
-docker compose -f docker-compose.prod.yml exec mongodb mongodump --out /dump
-docker cp $(docker compose -f docker-compose.prod.yml ps -q mongodb):/dump ./mongodb_backup_$(date +%Y%m%d)
+# Backup HNET keys (5G mode)
+cp -r open5gs/hnet/ open5gs/hnet.backup.$(date +%Y%m%d) 2>/dev/null
+
+# Backup MongoDB subscribers (while running)
+docker exec open5g2go-mongodb mongo open5gs --quiet \
+  --eval 'JSON.stringify(db.subscribers.find().toArray(), null, 2)' \
+  > subscribers_backup_$(date +%Y%m%d).json
 ```
 
 ### Restoring MongoDB Data
@@ -225,6 +232,58 @@ docker cp ./mongodb_backup_YYYYMMDD $(docker compose -f docker-compose.prod.yml 
 
 # Restore
 docker compose -f docker-compose.prod.yml exec mongodb mongorestore /dump
+```
+
+## Manual Subscriber Provisioning via MongoDB
+
+While the Web UI is the recommended way to add subscribers, you can also provision directly via MongoDB. This is useful for scripting or restoring from backups.
+
+!!! warning "NumberInt() Required"
+    When inserting subscriber documents directly into MongoDB, all numeric fields **must** use `NumberInt()`. Without it, MongoDB stores them as floats and the Open5GS UDR will reject the record with errors like `No SST` or `No UE-AMBR`.
+
+```bash
+docker exec open5g2go-mongodb mongo open5gs --eval '
+db.subscribers.insertOne({
+  "imsi": "999700000000001",
+  "access_restriction_data": NumberInt(32),
+  "ambr": {
+    "uplink": {"value": NumberInt(1), "unit": NumberInt(3)},
+    "downlink": {"value": NumberInt(1), "unit": NumberInt(3)}
+  },
+  "device_name": "Device-01",
+  "msisdn": [],
+  "network_access_mode": NumberInt(0),
+  "schema_version": NumberInt(1),
+  "security": {
+    "k": "YOUR_KI_KEY_32_HEX_CHARS_HERE_",
+    "amf": "8000",
+    "op": null,
+    "opc": "YOUR_OPC_KEY_32_HEX_CHARS_HERE"
+  },
+  "slice": [{
+    "sst": NumberInt(1),
+    "default_indicator": true,
+    "session": [{
+      "name": "internet",
+      "type": NumberInt(3),
+      "qos": {
+        "index": NumberInt(9),
+        "arp": {
+          "priority_level": NumberInt(8),
+          "pre_emption_capability": NumberInt(1),
+          "pre_emption_vulnerability": NumberInt(2)
+        }
+      },
+      "ambr": {
+        "uplink": {"value": NumberInt(1), "unit": NumberInt(3)},
+        "downlink": {"value": NumberInt(1), "unit": NumberInt(3)}
+      }
+    }]
+  }],
+  "subscribed_rau_tau_timer": NumberInt(12),
+  "subscriber_status": NumberInt(0)
+})
+'
 ```
 
 ## Troubleshooting Operations

@@ -77,18 +77,28 @@ Configuration varies by gNodeB vendor. The following parameters must be set on a
 |---------|-------|
 | AMF IP Address | Your Docker host IP |
 | NGAP Port | 38412 |
-| MCC | 315 (or your configured MCC) |
-| MNC | 010 (or your configured MNC) |
+| MCC | Your configured MCC (e.g., 315 for US CBRS, 999 for test) |
+| MNC | Your configured MNC (e.g., 010, 70) |
 | TAC | 1 |
 | SST | 1 |
 
 Consult your gNodeB vendor's documentation for the specific configuration interface and procedure.
 
+### N2/N3 Interface Configuration
+
+Some gNodeBs require **separate IP addresses** for the N2 (NGAP/signaling) and N3 (GTP-U/user plane) interfaces. If your gNodeB has separate N2 and N3 settings:
+
+- **N2 IP**: The gNodeB's management/signaling IP (used for SCTP to AMF)
+- **N3 IP**: A different IP on the gNodeB for GTP-U user plane traffic
+
+If downlink data doesn't reach the UE but uplink works, check whether your gNodeB requires distinct N2/N3 IPs.
+
 !!! tip
     The gNodeB will need to establish a network connection to the AMF IP address. Ensure that:
     - The gNodeB and Docker host are on the same network or have routing configured
-    - Firewall rules allow traffic on port 38412 (SCTP)
-    - The Docker host's firewall is configured to accept NGAP connections
+    - Firewall rules allow traffic on port 38412 (SCTP) and 2152 (UDP)
+    - The Docker host's firewall is configured to accept NGAP and GTP-U connections
+    - The SCTP kernel module is loaded: `sudo modprobe sctp`
 
 ---
 
