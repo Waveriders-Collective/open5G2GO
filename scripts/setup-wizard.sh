@@ -216,7 +216,7 @@ if [ "$SETUP_MODE" = "full" ]; then
     echo ""
     echo -e "  ${BOLD}[1]${NC} 315-010 - US CBRS Private LTE (default)"
     echo -e "  ${BOLD}[2]${NC} 001-01  - Test Network (sysmocom/programmable SIMs)"
-    echo -e "  ${BOLD}[3]${NC} 999-70  - Test Network (Seneca/SurfSIM)"
+    echo -e "  ${BOLD}[3]${NC} 999-70  - Test Network"
     echo -e "  ${BOLD}[4]${NC} 999-99  - Test Network"
     echo -e "  ${BOLD}[5]${NC} 999-01  - Test Network"
     echo ""
