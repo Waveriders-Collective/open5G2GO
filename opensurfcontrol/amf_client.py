@@ -347,14 +347,14 @@ class AMFLogParser:
         return [session.to_dict() for session in sessions.values()]
 
     def get_ue_count(self) -> int:
-        """Get count of registered UEs."""
-        self.parse_ue_sessions()
-        return self._gnb_ue_count
+        """Get count of registered UEs (from parsed session state, not transient NGAP contexts)."""
+        sessions = self.parse_ue_sessions()
+        return len(sessions)
 
     def get_session_count(self) -> int:
-        """Get count of active PDU sessions."""
-        self.parse_ue_sessions()
-        return self._amf_session_count
+        """Get count of active sessions (registered UEs with PDU sessions)."""
+        sessions = self.parse_ue_sessions()
+        return len(sessions)
 
 
 # =============================================================================
