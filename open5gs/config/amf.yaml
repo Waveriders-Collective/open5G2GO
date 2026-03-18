@@ -28,8 +28,8 @@ amf:
   # GUAMI (Globally Unique AMF Identifier)
   guami:
     - plmn_id:
-        mcc: "999"
-        mnc: "70"
+        mcc: "315"
+        mnc: "010"
       amf_id:
         region: 2
         set: 1
@@ -37,15 +37,15 @@ amf:
   # TAI (Tracking Area Identity)
   tai:
     - plmn_id:
-        mcc: "999"
-        mnc: "70"
+        mcc: "315"
+        mnc: "010"
       tac: 1
 
   # PLMN support with S-NSSAI (network slicing)
   plmn_support:
     - plmn_id:
-        mcc: "999"
-        mnc: "70"
+        mcc: "315"
+        mnc: "010"
       s_nssai:
         - sst: 1  # eMBB (enhanced Mobile Broadband)
 

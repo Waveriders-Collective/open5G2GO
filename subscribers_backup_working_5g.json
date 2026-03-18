@@ -1,0 +1,75 @@
+[
+  {
+    "_id": {
+      "$oid": "69bab23dd7c1b5a4618fc073"
+    },
+    "imsi": "999700308170001",
+    "access_restriction_data": 32,
+    "ambr": {
+      "uplink": {
+        "value": 1,
+        "unit": 3
+      },
+      "downlink": {
+        "value": 1,
+        "unit": 3
+      }
+    },
+    "device_name": "Seneca-5G-Test",
+    "imeisv": "3531657613687320",
+    "mme_host": [],
+    "mme_realm": [],
+    "msisdn": [
+      "18456451973"
+    ],
+    "network_access_mode": 0,
+    "operator_determined_barring": 0,
+    "purge_flag": [],
+    "schema_version": 1,
+    "security": {
+      "k": "e571888d0d4a7d1ef61754925ca03284",
+      "amf": "8000",
+      "op": null,
+      "opc": "3ebe37156d2a8f8720aa607dec414e2f",
+      "sqn": {
+        "$numberLong": "1281"
+      }
+    },
+    "slice": [
+      {
+        "sst": 1,
+        "default_indicator": true,
+        "session": [
+          {
+            "name": "internet",
+            "type": 3,
+            "qos": {
+              "index": 9,
+              "arp": {
+                "priority_level": 8,
+                "pre_emption_capability": 1,
+                "pre_emption_vulnerability": 2
+              }
+            },
+            "ambr": {
+              "uplink": {
+                "value": 1,
+                "unit": 3
+              },
+              "downlink": {
+                "value": 1,
+                "unit": 3
+              }
+            },
+            "pcc_rule": [],
+            "ue": {
+              "ipv4": "10.48.99.100"
+            }
+          }
+        ]
+      }
+    ],
+    "subscribed_rau_tau_timer": 12,
+    "subscriber_status": 0
+  }
+]

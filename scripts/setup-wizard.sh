@@ -216,8 +216,9 @@ if [ "$SETUP_MODE" = "full" ]; then
     echo ""
     echo -e "  ${BOLD}[1]${NC} 315-010 - US CBRS Private LTE (default)"
     echo -e "  ${BOLD}[2]${NC} 001-01  - Test Network (sysmocom/programmable SIMs)"
-    echo -e "  ${BOLD}[3]${NC} 999-99  - Test Network"
-    echo -e "  ${BOLD}[4]${NC} 999-01  - Test Network"
+    echo -e "  ${BOLD}[3]${NC} 999-70  - Test Network (Seneca/SurfSIM)"
+    echo -e "  ${BOLD}[4]${NC} 999-99  - Test Network"
+    echo -e "  ${BOLD}[5]${NC} 999-01  - Test Network"
     echo ""
 
     read -p "Choice [1]: " plmn_choice
@@ -226,8 +227,9 @@ if [ "$SETUP_MODE" = "full" ]; then
     case "$plmn_choice" in
         1) MCC="315"; MNC="010" ;;
         2) MCC="001"; MNC="01" ;;
-        3) MCC="999"; MNC="99" ;;
-        4) MCC="999"; MNC="01" ;;
+        3) MCC="999"; MNC="70" ;;
+        4) MCC="999"; MNC="99" ;;
+        5) MCC="999"; MNC="01" ;;
         *) MCC="315"; MNC="010" ;;
     esac
 

@@ -26,7 +26,7 @@ upf:
   gtpu:
     server:
       - address: 0.0.0.0
-        advertise: 192.168.8.5
+        advertise: 10.48.0.110  # Docker host IP — updated by setup-wizard.sh
 
   # UE IP pool and TUN interface
   session:

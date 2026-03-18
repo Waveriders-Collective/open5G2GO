@@ -18,5 +18,5 @@ nrf:
 
   serving:
     - plmn_id:
-        mcc: "999"
-        mnc: "70"
+        mcc: "315"
+        mnc: "010"
