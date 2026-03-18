@@ -1,0 +1,36 @@
+# Open5GS UPF (User Plane Function) Configuration - 5G SA Host Mode
+# HOST MODE variant - UPF runs with network_mode: host
+# PFCP binds to Docker bridge gateway (reachable from SMF on bridge)
+# GTP-U binds to all interfaces (gNodeB sends directly to host IP)
+# No 'advertise' needed - the real host IP IS the bind address
+
+logger:
+  file:
+    path: /var/log/open5gs/upf.log
+  level: info
+
+global:
+  max:
+    ue: 100
+
+upf:
+  # PFCP interface from SMF (via Docker bridge gateway)
+  pfcp:
+    server:
+      - address: 172.26.0.1  # Docker bridge gateway (reachable from SMF)
+    client:
+      smf:
+        - address: 172.26.0.14  # SMF stays on bridge
+
+  # GTP-U interface (N3 from gNodeB - host mode, bind all interfaces)
+  gtpu:
+    server:
+      - address: 0.0.0.0
+        # No advertise needed in host mode - gNodeB connects to real host IP
+
+  # UE IP pool and TUN interface
+  session:
+    - subnet: 10.48.99.0/24
+      gateway: 10.48.99.1
+      dnn: internet
+      dev: ogstun  # TUN device name

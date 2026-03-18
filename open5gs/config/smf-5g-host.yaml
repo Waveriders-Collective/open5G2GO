@@ -1,0 +1,52 @@
+# Open5GS SMF (Session Management Function) Configuration - 5G SA Mode
+# Host-mode UPF variant: PFCP client points to Docker bridge gateway
+# where the host-mode UPF is listening
+
+logger:
+  file:
+    path: /var/log/open5gs/smf.log
+  level: info
+
+global:
+  max:
+    ue: 100
+
+smf:
+  sbi:
+    server:
+      - address: 172.26.0.14
+        port: 7777
+    client:
+      nrf:
+        - uri: http://172.26.0.30:7777
+
+  # GTP-U interface (required by Open5GS even in 5G-only mode)
+  gtpu:
+    server:
+      - address: 172.26.0.14
+
+  # PFCP interface to UPF (UPF on host, reachable via bridge gateway)
+  pfcp:
+    server:
+      - address: 172.26.0.14
+    client:
+      upf:
+        - address: 172.26.0.1  # UPF is on host, listening on bridge gateway
+
+  # UE IP pool configuration (10.48.99.0/24 as per plan)
+  session:
+    - subnet: 10.48.99.0/24
+      gateway: 10.48.99.1
+      dnn: internet
+
+  # DNS servers for UE
+  dns:
+    - 8.8.8.8
+    - 8.8.4.4
+
+  # MTU for UE traffic
+  mtu: 1400
+
+  # Disable online charging (Gy interface) - not needed for homelab
+  ctf:
+    enabled: no

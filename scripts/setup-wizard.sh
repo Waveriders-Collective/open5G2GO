@@ -535,14 +535,14 @@ echo -e "Configuration file generated: ${GREEN}.env${NC}"
 # Update PLMN in the appropriate control plane config
 if [ "$NETWORK_MODE" = "5g" ]; then
     # Update AMF, NRF PLMN for 5G mode
-    AMF_CONFIG="$PROJECT_DIR/open5gs/config/amf.yaml"
-    if [ -f "$AMF_CONFIG" ]; then
-        sed "s/mcc: \"[^\"]*\"/mcc: \"${MCC}\"/g" "$AMF_CONFIG" > "$AMF_CONFIG.tmp" && mv "$AMF_CONFIG.tmp" "$AMF_CONFIG"
-        sed "s/mnc: \"[^\"]*\"/mnc: \"${MNC}\"/g" "$AMF_CONFIG" > "$AMF_CONFIG.tmp" && mv "$AMF_CONFIG.tmp" "$AMF_CONFIG"
-        echo -e "AMF PLMN configured: ${GREEN}${MCC}-${MNC}${NC}"
-    else
-        echo -e "${YELLOW}Warning: AMF config not found at $AMF_CONFIG${NC}"
-    fi
+    # Update both AMF configs (bridge and host mode)
+    for AMF_CONFIG in "$PROJECT_DIR/open5gs/config/amf.yaml" "$PROJECT_DIR/open5gs/config/amf-host.yaml"; do
+        if [ -f "$AMF_CONFIG" ]; then
+            sed "s/mcc: \"[^\"]*\"/mcc: \"${MCC}\"/g" "$AMF_CONFIG" > "$AMF_CONFIG.tmp" && mv "$AMF_CONFIG.tmp" "$AMF_CONFIG"
+            sed "s/mnc: \"[^\"]*\"/mnc: \"${MNC}\"/g" "$AMF_CONFIG" > "$AMF_CONFIG.tmp" && mv "$AMF_CONFIG.tmp" "$AMF_CONFIG"
+        fi
+    done
+    echo -e "AMF PLMN configured: ${GREEN}${MCC}-${MNC}${NC}"
 
     NRF_CONFIG="$PROJECT_DIR/open5gs/config/nrf.yaml"
     if [ -f "$NRF_CONFIG" ]; then
@@ -695,6 +695,30 @@ echo ""
 
 if [ "$NETWORK_MODE" = "5g" ]; then
     echo -e "FreeDiameter certificates: ${YELLOW}Skipped (not needed for 5G SA)${NC}"
+
+    # Generate HNET keys for SUCI decryption (5G-AKA authentication)
+    echo ""
+    echo -e "${BLUE}Step 9b: HNET Keys (SUCI Decryption)${NC}"
+    echo "─────────────────────────────────"
+    echo ""
+
+    HNET_DIR="$PROJECT_DIR/open5gs/hnet"
+    mkdir -p "$HNET_DIR"
+
+    if [ ! -f "$HNET_DIR/curve25519-1.key" ]; then
+        echo "Generating HNET curve25519 keys for SUCI decryption..."
+        # Key ID 1 (primary)
+        openssl genpkey -algorithm X25519 -out "$HNET_DIR/curve25519-1.key" 2>/dev/null
+        # Key ID 2 (secondary)
+        openssl genpkey -algorithm X25519 -out "$HNET_DIR/curve25519-2.key" 2>/dev/null
+        chmod 600 "$HNET_DIR"/*.key 2>/dev/null || true
+        echo -e "HNET keys: ${GREEN}Generated${NC}"
+        echo ""
+        echo -e "${YELLOW}NOTE: These keys must match your SIM card's SUPI concealment config.${NC}"
+        echo "If your SIMs don't use SUCI concealment, these keys are ignored."
+    else
+        echo -e "HNET keys: ${GREEN}Already exist${NC}"
+    fi
 else
 
 CERT_DIR="$PROJECT_DIR/open5gs/config/freeDiameter"
@@ -743,16 +767,10 @@ echo "────────────────────────�
 echo ""
 
 if [ "$NETWORK_MODE" = "5g" ]; then
-    # 5G: Configure UPF advertise address (gNodeB needs this to send GTP-U)
-    UPF_5G_CONFIG="$PROJECT_DIR/open5gs/config/upf-5g.yaml"
-    if [ -f "$UPF_5G_CONFIG" ]; then
-        echo "Configuring UPF advertise address for gNodeB..."
-        sed "s/advertise:.*/advertise: ${DOCKER_HOST_IP}/" "$UPF_5G_CONFIG" > "$UPF_5G_CONFIG.tmp"
-        mv "$UPF_5G_CONFIG.tmp" "$UPF_5G_CONFIG"
-        echo -e "UPF advertise IP: ${GREEN}${DOCKER_HOST_IP}${NC}"
-    else
-        echo -e "${YELLOW}Warning: UPF 5G config not found at $UPF_5G_CONFIG${NC}"
-    fi
+    # 5G: UPF runs in host mode — no advertise IP needed.
+    # GTP-U binds to 0.0.0.0 and the gNodeB connects to the real host IP directly.
+    echo -e "UPF GTP-U advertise: ${GREEN}Not needed (host mode — gNodeB uses host IP directly)${NC}"
+    echo -e "AMF NGAP: ${GREEN}Host mode on 0.0.0.0:38412${NC}"
 else
     # 4G: Configure SGWU advertise address (eNodeB needs this)
     SGWU_CONFIG="$PROJECT_DIR/open5gs/config/sgwu.yaml"

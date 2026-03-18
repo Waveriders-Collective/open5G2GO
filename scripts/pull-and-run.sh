@@ -19,9 +19,8 @@ cd "$PROJECT_DIR"
 setup_host_networking() {
     echo "Configuring host networking for UE data path..."
 
-    # UE subnet and UPF container IP (on Docker bridge)
+    # UE subnet
     UE_SUBNET="10.48.99.0/24"
-    UPF_IP="172.26.0.15"
 
     # Detect primary interface (the one with default route)
     PRIMARY_IF=$(ip route | grep default | awk '{print $5}' | head -1)
@@ -36,16 +35,29 @@ setup_host_networking() {
         sysctl -w net.ipv4.ip_forward=1 > /dev/null
     fi
 
-    # Add route for UE subnet via UPF container
-    if ! ip route show | grep -q "$UE_SUBNET"; then
-        echo "  Adding route for UE subnet ($UE_SUBNET) via UPF ($UPF_IP)..."
-        ip route add $UE_SUBNET via $UPF_IP 2>/dev/null || true
-    fi
+    if [ "$NETWORK_MODE" = "5g" ]; then
+        # 5G mode: UPF runs in host mode — ogstun is on the host directly.
+        # The UPF entrypoint handles iptables FORWARD and MASQUERADE rules.
+        # We only need to ensure ip_forward is enabled (done above) and
+        # load the SCTP kernel module for AMF's NGAP interface.
+        echo "  5G host-mode: UPF handles its own routing via entrypoint"
+        echo "  Loading SCTP kernel module..."
+        modprobe sctp 2>/dev/null || true
+    else
+        # 4G mode: UPF/SGWU on Docker bridge — host needs route via bridge IP
+        UPF_IP="172.26.0.15"
 
-    # Add NAT rule for UE subnet
-    if ! iptables -t nat -C POSTROUTING -s $UE_SUBNET -o $PRIMARY_IF -j MASQUERADE 2>/dev/null; then
-        echo "  Adding NAT rule for UE subnet on $PRIMARY_IF..."
-        iptables -t nat -A POSTROUTING -s $UE_SUBNET -o $PRIMARY_IF -j MASQUERADE
+        # Add route for UE subnet via UPF container
+        if ! ip route show | grep -q "$UE_SUBNET"; then
+            echo "  Adding route for UE subnet ($UE_SUBNET) via UPF ($UPF_IP)..."
+            ip route add $UE_SUBNET via $UPF_IP 2>/dev/null || true
+        fi
+
+        # Add NAT rule for UE subnet
+        if ! iptables -t nat -C POSTROUTING -s $UE_SUBNET -o $PRIMARY_IF -j MASQUERADE 2>/dev/null; then
+            echo "  Adding NAT rule for UE subnet on $PRIMARY_IF..."
+            iptables -t nat -A POSTROUTING -s $UE_SUBNET -o $PRIMARY_IF -j MASQUERADE
+        fi
     fi
 
     echo "  Host networking configured successfully"

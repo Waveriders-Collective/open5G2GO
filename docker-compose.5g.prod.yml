@@ -83,7 +83,7 @@ services:
       retries: 5
       start_period: 20s
 
-  # UDM - Unified Data Management
+  # UDM - Unified Data Management (with HNET keys for SUCI decryption)
   udm:
     image: ghcr.io/waveriders-collective/open5g2go-open5gs:latest
     container_name: open5g2go-udm
@@ -93,7 +93,8 @@ services:
       nrf:
         condition: service_healthy
     volumes:
-      - ./open5gs/config/udm.yaml:/etc/open5gs/udm.yaml:ro
+      - ./open5gs/config/udm-hnet.yaml:/etc/open5gs/udm.yaml:ro
+      - ./open5gs/hnet:/etc/open5gs/hnet:ro
       - open5gs_logs:/var/log/open5gs
     networks:
       open5g2go:
@@ -176,6 +177,7 @@ services:
       start_period: 20s
 
   # SMF - Session Management Function (5G mode - SBI, no Diameter/GTP-C)
+  # Uses host-mode SMF config: PFCP points to UPF via bridge gateway (172.26.0.1)
   smf:
     image: ghcr.io/waveriders-collective/open5g2go-open5gs:latest
     container_name: open5g2go-smf
@@ -184,10 +186,8 @@ services:
     depends_on:
       nrf:
         condition: service_healthy
-      upf:
-        condition: service_healthy
     volumes:
-      - ./open5gs/config/smf-5g.yaml:/etc/open5gs/smf.yaml:ro
+      - ./open5gs/config/smf-5g-host.yaml:/etc/open5gs/smf.yaml:ro
       - open5gs_logs:/var/log/open5gs
     networks:
       open5g2go:
@@ -200,25 +200,17 @@ services:
       start_period: 20s
 
   # UPF - User Plane Function (5G mode - receives GTP-U directly from gNodeB)
+  # Host mode: GTP-U on real host IP, PFCP via bridge gateway, ogstun on host
   upf:
     image: ghcr.io/waveriders-collective/open5g2go-open5gs:latest
     container_name: open5g2go-upf
     restart: unless-stopped
+    network_mode: host
+    privileged: true  # Needed for TUN/iptables in host mode (sysctls not allowed)
     command: open5gs-upfd
-    cap_add:
-      - NET_ADMIN
-    devices:
-      - /dev/net/tun
-    sysctls:
-      - net.ipv4.ip_forward=1
     volumes:
-      - ./open5gs/config/upf-5g.yaml:/etc/open5gs/upf.yaml:ro
+      - ./open5gs/config/upf-5g-host.yaml:/etc/open5gs/upf.yaml:ro
       - open5gs_logs:/var/log/open5gs
-    ports:
-      - "2152:2152/udp"  # GTP-U N3 for user data (directly from gNodeB)
-    networks:
-      open5g2go:
-        ipv4_address: 172.26.0.15
     healthcheck:
       test: ["CMD", "pgrep", "-f", "open5gs-upfd"]
       interval: 10s
@@ -227,10 +219,12 @@ services:
       start_period: 20s
 
   # AMF - Access and Mobility Management Function (NGAP interface to gNodeB)
+  # Host mode: SCTP on real host IP, SBI via bridge gateway
   amf:
     image: ghcr.io/waveriders-collective/open5g2go-open5gs:latest
     container_name: open5g2go-amf
     restart: unless-stopped
+    network_mode: host
     command: open5gs-amfd
     depends_on:
       nrf:
@@ -238,13 +232,8 @@ services:
       smf:
         condition: service_healthy
     volumes:
-      - ./open5gs/config/amf.yaml:/etc/open5gs/amf.yaml:ro
+      - ./open5gs/config/amf-host.yaml:/etc/open5gs/amf.yaml:ro
       - open5gs_logs:/var/log/open5gs
-    ports:
-      - "38412:38412/sctp"  # NGAP for gNodeB connection
-    networks:
-      open5g2go:
-        ipv4_address: 172.26.0.31
     healthcheck:
       test: ["CMD", "pgrep", "-f", "open5gs-amfd"]
       interval: 10s

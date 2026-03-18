@@ -1,23 +1,27 @@
-# Open5G2GO Docker Compose Configuration - 5G SA Mode (Development)
-# Self-contained 5G Standalone core network deployment with local builds
+# Open5G2GO - Minimal 5G SA Core Test Compose
+# Stripped-down deployment with ONLY the core NFs needed for UE registration
+# and PDU session establishment. No backend, no frontend, no management stack.
 #
-# Services:
-#   - mongodb: Subscriber database
-#   - open5gs-*: 5G SA core network functions
-#   - backend: FastAPI REST API
-#   - frontend: React SPA on port 8080
+# Purpose: Isolate and verify that host-mode AMF/UPF networking works with
+# a real gNodeB before integrating into the full compose files.
 #
-# IMPORTANT: Before deploying, ensure:
-#   1. SCTP kernel module is loaded: sudo modprobe sctp
-#   2. Docker host IP is reachable from gNodeB
-#   3. Firewall allows ports 38412/sctp and 2152/udp
+# Usage:
+#   docker compose -f docker-compose.5g-test.yml up -d
+#   # Add test subscriber via mongosh:
+#   docker exec open5g2go-mongodb mongosh open5gs --eval '...'
+#   # Watch AMF logs for gNB NG Setup:
+#   docker logs -f open5g2go-amf
+#
+# Verification:
+#   ss -tlnp | grep 38412   # AMF NGAP listening on host
+#   ss -ulnp | grep 2152    # UPF GTP-U listening on host
 
 services:
   # =============================================================================
   # Database
   # =============================================================================
   mongodb:
-    image: mongo:4.4  # 4.4 supports CPUs without AVX (5.0+ requires AVX)
+    image: mongo:4.4
     container_name: open5g2go-mongodb
     restart: unless-stopped
     environment:
@@ -35,7 +39,7 @@ services:
       start_period: 10s
 
   # =============================================================================
-  # Open5GS 5G SA Core Components
+  # 5G SA Core - Bridge-mode NFs (internal SBI only)
   # =============================================================================
 
   # NRF - Network Repository Function (service discovery)
@@ -136,7 +140,7 @@ services:
       retries: 5
       start_period: 20s
 
-  # PCF - Policy Control Function (replaces PCRF from 4G)
+  # PCF - Policy Control Function
   pcf:
     build:
       context: ./open5gs
@@ -188,8 +192,7 @@ services:
       retries: 5
       start_period: 20s
 
-  # SMF - Session Management Function (5G mode - SBI, no Diameter/GTP-C)
-  # Uses host-mode SMF config: PFCP points to UPF via bridge gateway (172.26.0.1)
+  # SMF - Session Management Function (PFCP points to UPF on bridge gateway)
   smf:
     build:
       context: ./open5gs
@@ -213,7 +216,31 @@ services:
       retries: 5
       start_period: 20s
 
-  # UPF - User Plane Function (5G mode - receives GTP-U directly from gNodeB)
+  # =============================================================================
+  # 5G SA Core - Host-mode NFs (physical network access)
+  # =============================================================================
+
+  # AMF - Access and Mobility Management Function (NGAP to gNodeB)
+  # Host mode: SCTP on real host IP, SBI via bridge gateway
+  amf:
+    build:
+      context: ./open5gs
+      dockerfile: Dockerfile
+    container_name: open5g2go-amf
+    restart: unless-stopped
+    network_mode: host
+    command: open5gs-amfd
+    volumes:
+      - ./open5gs/config/amf-host.yaml:/etc/open5gs/amf.yaml:ro
+      - open5gs_logs:/var/log/open5gs
+    healthcheck:
+      test: ["CMD", "pgrep", "-f", "open5gs-amfd"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  # UPF - User Plane Function (GTP-U from gNodeB)
   # Host mode: GTP-U on real host IP, PFCP via bridge gateway, ogstun on host
   upf:
     build:
@@ -233,92 +260,6 @@ services:
       timeout: 5s
       retries: 5
       start_period: 20s
-
-  # AMF - Access and Mobility Management Function (NGAP interface to gNodeB)
-  # Host mode: SCTP on real host IP, SBI via bridge gateway
-  amf:
-    build:
-      context: ./open5gs
-      dockerfile: Dockerfile
-    container_name: open5g2go-amf
-    restart: unless-stopped
-    network_mode: host
-    command: open5gs-amfd
-    depends_on:
-      nrf:
-        condition: service_healthy
-      smf:
-        condition: service_healthy
-    volumes:
-      - ./open5gs/config/amf-host.yaml:/etc/open5gs/amf.yaml:ro
-      - open5gs_logs:/var/log/open5gs
-    healthcheck:
-      test: ["CMD", "pgrep", "-f", "open5gs-amfd"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 20s
-
-  # =============================================================================
-  # Management Stack
-  # =============================================================================
-
-  # Backend - FastAPI REST API
-  backend:
-    build:
-      context: .
-      dockerfile: Dockerfile.backend
-    container_name: open5g2go-backend
-    restart: unless-stopped
-    depends_on:
-      mongodb:
-        condition: service_healthy
-    # Add docker group for service monitoring socket access
-    group_add:
-      - ${DOCKER_GID:-994}
-    environment:
-      - MONGODB_URI=mongodb://mongodb:27017/open5gs
-      - DEBUG=false
-      - APP_NAME=Open5G2GO API
-      - NETWORK_MODE=5g
-      # Host IP for gNodeB configuration display (Docker host IP that gNodeBs connect to)
-      - HOST_IP=${HOST_IP:-10.48.0.110}
-      # SIM authentication keys (configured by setup-wizard)
-      - OPEN5GS_DEFAULT_K=${OPEN5GS_DEFAULT_K}
-      - OPEN5GS_DEFAULT_OPC=${OPEN5GS_DEFAULT_OPC}
-      # Google SAS API Configuration (optional - for CBRS grant monitoring)
-      - GOOGLE_APPLICATION_CREDENTIALS=/app/config/sas-service-account.json
-      - ENODEB_CONFIG_PATH=/app/config/enodebs.yaml
-      - GNODEB_CONFIG_PATH=/app/config/gnodebs.yaml
-    volumes:
-      - open5gs_logs:/var/log/open5gs:ro  # Read-only access for log parsing
-      - ./config:/app/config:ro           # eNodeB/gNodeB config and SAS credentials
-      - ./open5gs/config:/etc/open5gs:ro  # Open5GS config files for network config display
-      - /var/run/docker.sock:/var/run/docker.sock:ro  # Docker socket for service monitoring
-    networks:
-      open5g2go:
-        ipv4_address: 172.26.0.20
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 10s
-
-  # Frontend - React SPA with nginx
-  frontend:
-    build:
-      context: .
-      dockerfile: Dockerfile.frontend
-    container_name: open5g2go-frontend
-    restart: unless-stopped
-    depends_on:
-      - backend
-    ports:
-      - "8080:80"  # Web UI
-    networks:
-      open5g2go:
-        ipv4_address: 172.26.0.21
 
 # =============================================================================
 # Networks

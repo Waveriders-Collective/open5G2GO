@@ -48,6 +48,19 @@ if [ "$1" = "open5gs-upfd" ]; then
                 ip link set ogstun up
                 ip addr add 10.48.99.1/24 dev ogstun 2>/dev/null || true
                 echo "ogstun configured: $(ip addr show ogstun | grep inet)"
+
+                # Host-mode forwarding: route UE traffic between ogstun and physical interface
+                # In host mode, ogstun is on the host network stack, so we need explicit
+                # FORWARD rules to allow traffic between the TUN and the primary interface.
+                PRIMARY_IF=$(ip route | grep default | awk '{print $5}' | head -1)
+                if [ -n "$PRIMARY_IF" ]; then
+                    echo "Setting up host-mode forwarding (ogstun <-> $PRIMARY_IF)..."
+                    iptables -I FORWARD 1 -i ogstun -o "$PRIMARY_IF" -j ACCEPT 2>/dev/null || true
+                    iptables -I FORWARD 2 -i "$PRIMARY_IF" -o ogstun -m state --state RELATED,ESTABLISHED -j ACCEPT 2>/dev/null || true
+                    iptables -t nat -A POSTROUTING -s 10.48.99.0/24 -o "$PRIMARY_IF" -j MASQUERADE 2>/dev/null || true
+                    echo "Host-mode forwarding configured on $PRIMARY_IF"
+                fi
+
                 exit 0
             fi
             sleep 1
