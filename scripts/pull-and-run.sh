@@ -104,7 +104,7 @@ sleep 10
 MAX_ATTEMPTS=30
 ATTEMPT=0
 while [ $ATTEMPT -lt $MAX_ATTEMPTS ]; do
-    if curl -sf http://localhost:8000/api/v1/health > /dev/null 2>&1; then
+    if curl -sf http://localhost:8080/api/v1/health > /dev/null 2>&1; then
         break
     fi
     ((ATTEMPT++))
