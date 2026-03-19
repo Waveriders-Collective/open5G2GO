@@ -109,7 +109,7 @@ export const NetworkConfig: React.FC = () => {
         </div>
       </Card>
 
-      {/* eNodeB Configuration */}
+      {/* eNodeB Configuration (4G) */}
       {data?.enodeb_config && (
         <Card
           title="eNodeB Configuration"
@@ -122,6 +122,41 @@ export const NetworkConfig: React.FC = () => {
               { setting: 'MME Port', value: String(data.enodeb_config.mme_port) },
               { setting: 'PLMN ID', value: data.enodeb_config.plmn_id },
               { setting: 'TAC', value: String(data.enodeb_config.tac) },
+            ]}
+            columns={[
+              {
+                key: 'setting',
+                header: 'Setting',
+                render: (value) => (
+                  <span className="font-heading text-gray-charcoal">{value}</span>
+                ),
+              },
+              {
+                key: 'value',
+                header: 'Value',
+                render: (value) => (
+                  <span className="font-mono text-primary-deep font-semibold">{value}</span>
+                ),
+              },
+            ]}
+          />
+        </Card>
+      )}
+
+      {/* gNodeB Configuration (5G) */}
+      {data?.gnodeb_config && (
+        <Card
+          title="gNodeB Configuration"
+          subtitle="Use these settings when configuring your gNodeB"
+          className="bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200"
+        >
+          <Table
+            data={[
+              { setting: 'AMF IP Address', value: data.gnodeb_config.amf_ip },
+              { setting: 'AMF Port (NGAP)', value: String(data.gnodeb_config.amf_port) },
+              { setting: 'PLMN ID', value: data.gnodeb_config.plmn_id },
+              { setting: 'TAC', value: String(data.gnodeb_config.tac) },
+              { setting: 'SST (Slice Type)', value: String(data.gnodeb_config.sst) },
             ]}
             columns={[
               {

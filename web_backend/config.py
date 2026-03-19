@@ -17,7 +17,7 @@ class Settings(BaseSettings):
 
     # API Configuration
     app_name: str = "Open5G2GO Web API"
-    app_version: str = "0.1.0"
+    app_version: str = "0.2.0"
     api_prefix: str = "/api/v1"
     debug: bool = os.getenv("DEBUG", "false").lower() == "true"
 
@@ -35,6 +35,9 @@ class Settings(BaseSettings):
 
     # System Configuration
     system_name: str = os.getenv("SYSTEM_NAME", "Open5G2GO")
+
+    # Network Mode: "4g" or "5g"
+    network_mode: str = os.getenv("NETWORK_MODE", "4g")
 
     # Request Timeouts
     api_timeout: int = 30  # seconds

@@ -95,10 +95,11 @@ Select option **2** for Network Reconfiguration.
 |---------|------------------|------------|
 | Docker Host IP | Updated | Updated |
 | UE Pool Subnet | Updated | Updated |
-| SGWU Advertise IP | Updated | Updated |
+| SGWU/UPF Advertise IP | Updated | Updated |
+| Network Mode (4G/5G) | Preserved | Updated |
 | PLMN (MCC/MNC) | Preserved | Updated |
 | SIM Keys (Ki/OPc) | Preserved | Updated |
-| eNodeB Config | Preserved | Updated |
+| eNodeB/gNodeB Config | Preserved | Updated |
 | Docker GID | Preserved | Updated |
 
 ### After Network Reconfiguration
@@ -114,13 +115,22 @@ The `pull-and-run.sh` script will:
 1. Reapply host networking rules (IP forwarding, routes, NAT)
 2. Start all services with the new configuration
 
-### Update eNodeB Configuration
+### Update eNodeB Configuration (4G Mode)
 
 After changing the host IP, update your eNodeB to connect to the new IP:
 
 1. Access your eNodeB management interface
 2. Update the MME IP address to your new `DOCKER_HOST_IP`
 3. The eNodeB should reconnect automatically
+
+### Update gNodeB Configuration (5G Mode)
+
+After changing the host IP, update your gNodeB to connect to the new IP:
+
+1. Access your gNodeB management interface
+2. Update the AMF IP address to your new `DOCKER_HOST_IP`
+3. The NGAP port remains 38412
+4. The gNodeB should reconnect automatically
 
 ## Full Reconfiguration
 
@@ -130,7 +140,8 @@ Use full setup when you need to change settings that network reconfiguration pre
 
 - Changing PLMN (MCC/MNC) for different SIM cards
 - Updating SIM authentication keys (Ki/OPc)
-- Reconfiguring eNodeBs from scratch
+- Switching between 4G and 5G network modes
+- Reconfiguring eNodeBs/gNodeBs from scratch
 - Starting fresh with new settings
 
 ### Running Full Setup
@@ -170,6 +181,7 @@ Understanding what data persists across different operations helps you plan main
 | Open5GS Logs | Files | `open5gs_logs` volume | Yes | Yes |
 | Configuration | .env file | Project root | Yes | Updated |
 | eNodeB Config | YAML file | `config/enodebs.yaml` | Yes | Preserved* |
+| gNodeB Config | YAML file | `config/gnodebs.yaml` | Yes | Preserved* |
 | FreeDiameter Certs | PEM files | `open5gs/config/freeDiameter/` | Yes | Yes |
 
 *Network reconfiguration preserves eNodeB config; full setup regenerates it.
@@ -188,18 +200,26 @@ docker volume inspect open5g2go_mongodb_data
 
 ### Backing Up Data
 
+!!! warning "Always Back Up Before Destructive Operations"
+    Always back up the subscriber database before running `docker compose down -v` or any operation that removes Docker volumes. Subscriber records (IMSIs, authentication keys, session data) cannot be recovered from config files alone.
+
 Before major changes, back up your data:
 
 ```bash
 # Backup .env
 cp .env .env.backup.$(date +%Y%m%d)
 
-# Backup eNodeB config
+# Backup base station configs
 cp config/enodebs.yaml config/enodebs.yaml.backup.$(date +%Y%m%d)
+cp config/gnodebs.yaml config/gnodebs.yaml.backup.$(date +%Y%m%d) 2>/dev/null
 
-# Backup MongoDB (while running)
-docker compose -f docker-compose.prod.yml exec mongodb mongodump --out /dump
-docker cp $(docker compose -f docker-compose.prod.yml ps -q mongodb):/dump ./mongodb_backup_$(date +%Y%m%d)
+# Backup HNET keys (5G mode)
+cp -r open5gs/hnet/ open5gs/hnet.backup.$(date +%Y%m%d) 2>/dev/null
+
+# Backup MongoDB subscribers (while running)
+docker exec open5g2go-mongodb mongo open5gs --quiet \
+  --eval 'JSON.stringify(db.subscribers.find().toArray(), null, 2)' \
+  > subscribers_backup_$(date +%Y%m%d).json
 ```
 
 ### Restoring MongoDB Data
@@ -212,6 +232,58 @@ docker cp ./mongodb_backup_YYYYMMDD $(docker compose -f docker-compose.prod.yml 
 
 # Restore
 docker compose -f docker-compose.prod.yml exec mongodb mongorestore /dump
+```
+
+## Manual Subscriber Provisioning via MongoDB
+
+While the Web UI is the recommended way to add subscribers, you can also provision directly via MongoDB. This is useful for scripting or restoring from backups.
+
+!!! warning "NumberInt() Required"
+    When inserting subscriber documents directly into MongoDB, all numeric fields **must** use `NumberInt()`. Without it, MongoDB stores them as floats and the Open5GS UDR will reject the record with errors like `No SST` or `No UE-AMBR`.
+
+```bash
+docker exec open5g2go-mongodb mongo open5gs --eval '
+db.subscribers.insertOne({
+  "imsi": "999700000000001",
+  "access_restriction_data": NumberInt(32),
+  "ambr": {
+    "uplink": {"value": NumberInt(1), "unit": NumberInt(3)},
+    "downlink": {"value": NumberInt(1), "unit": NumberInt(3)}
+  },
+  "device_name": "Device-01",
+  "msisdn": [],
+  "network_access_mode": NumberInt(0),
+  "schema_version": NumberInt(1),
+  "security": {
+    "k": "YOUR_KI_KEY_32_HEX_CHARS_HERE_",
+    "amf": "8000",
+    "op": null,
+    "opc": "YOUR_OPC_KEY_32_HEX_CHARS_HERE"
+  },
+  "slice": [{
+    "sst": NumberInt(1),
+    "default_indicator": true,
+    "session": [{
+      "name": "internet",
+      "type": NumberInt(3),
+      "qos": {
+        "index": NumberInt(9),
+        "arp": {
+          "priority_level": NumberInt(8),
+          "pre_emption_capability": NumberInt(1),
+          "pre_emption_vulnerability": NumberInt(2)
+        }
+      },
+      "ambr": {
+        "uplink": {"value": NumberInt(1), "unit": NumberInt(3)},
+        "downlink": {"value": NumberInt(1), "unit": NumberInt(3)}
+      }
+    }]
+  }],
+  "subscribed_rau_tau_timer": NumberInt(12),
+  "subscriber_status": NumberInt(0)
+})
+'
 ```
 
 ## Troubleshooting Operations

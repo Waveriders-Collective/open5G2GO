@@ -48,7 +48,8 @@ async def health_check() -> HealthCheckResponse:
     return HealthCheckResponse(
         status="healthy",
         version=settings.app_version,
-        service=settings.app_name
+        service=settings.app_name,
+        network_mode=settings.network_mode
     )
 
 
@@ -552,6 +553,26 @@ async def get_enodeb_status(
     return result
 
 
+@router.get(
+    "/gnodeb/status",
+    tags=["gNodeB"],
+    summary="Get gNodeB connection status (5G mode)",
+    response_description="NGAP connection status for configured gNodeBs"
+)
+async def get_gnodeb_status(
+    service: Open5GSService = Depends(get_service)
+) -> Dict[str, Any]:
+    """
+    Get gNodeB connection status from AMF logs (5G SA mode).
+
+    Returns NGAP connection status for all configured gNodeBs.
+    Only applicable when NETWORK_MODE=5g.
+    """
+    logger.info("Getting gNodeB status")
+    result = await service.get_gnodeb_status()
+    return result
+
+
 @router.post(
     "/enodeb/refresh",
     tags=["eNodeB"],
@@ -641,7 +662,8 @@ async def get_services_status() -> Dict[str, Any]:
 
     try:
         checker = get_service_checker()
-        result = checker.get_all_services_status(mode="4g_epc")
+        mode = "5g_sa" if settings.network_mode == "5g" else "4g_epc"
+        result = checker.get_all_services_status(mode=mode)
         return result
     except Exception as e:
         logger.error(f"Error getting services status: {e}")

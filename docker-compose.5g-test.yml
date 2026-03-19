@@ -1,0 +1,282 @@
+# Open5G2GO - Minimal 5G SA Core Test Compose
+# Stripped-down deployment with ONLY the core NFs needed for UE registration
+# and PDU session establishment. No backend, no frontend, no management stack.
+#
+# Purpose: Isolate and verify that host-mode AMF/UPF networking works with
+# a real gNodeB before integrating into the full compose files.
+#
+# Usage:
+#   docker compose -f docker-compose.5g-test.yml up -d
+#   # Add test subscriber via mongosh:
+#   docker exec open5g2go-mongodb mongosh open5gs --eval '...'
+#   # Watch AMF logs for gNB NG Setup:
+#   docker logs -f open5g2go-amf
+#
+# Verification:
+#   ss -tlnp | grep 38412   # AMF NGAP listening on host
+#   ss -ulnp | grep 2152    # UPF GTP-U listening on host
+
+services:
+  # =============================================================================
+  # Database
+  # =============================================================================
+  mongodb:
+    image: mongo:4.4
+    container_name: open5g2go-mongodb
+    restart: unless-stopped
+    environment:
+      - MONGO_INITDB_DATABASE=open5gs
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      open5g2go:
+        ipv4_address: 172.26.0.2
+    healthcheck:
+      test: ["CMD", "mongo", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # =============================================================================
+  # 5G SA Core - Bridge-mode NFs (internal SBI only)
+  # =============================================================================
+
+  # NRF - Network Repository Function (service discovery)
+  nrf:
+    build:
+      context: ./open5gs
+      dockerfile: Dockerfile
+    container_name: open5g2go-nrf
+    restart: unless-stopped
+    command: open5gs-nrfd
+    volumes:
+      - ./open5gs/config/nrf.yaml:/etc/open5gs/nrf.yaml:ro
+      - open5gs_logs:/var/log/open5gs
+    networks:
+      open5g2go:
+        ipv4_address: 172.26.0.30
+    healthcheck:
+      test: ["CMD", "pgrep", "-f", "open5gs-nrfd"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  # UDR - Unified Data Repository (subscriber data from MongoDB)
+  udr:
+    build:
+      context: ./open5gs
+      dockerfile: Dockerfile
+    container_name: open5g2go-udr
+    restart: unless-stopped
+    command: open5gs-udrd
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      nrf:
+        condition: service_healthy
+    environment:
+      - DB_URI=mongodb://mongodb/open5gs
+    volumes:
+      - ./open5gs/config/udr.yaml:/etc/open5gs/udr.yaml:ro
+      - open5gs_logs:/var/log/open5gs
+    networks:
+      open5g2go:
+        ipv4_address: 172.26.0.34
+    healthcheck:
+      test: ["CMD", "pgrep", "-f", "open5gs-udrd"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  # UDM - Unified Data Management (with HNET keys for SUCI decryption)
+  udm:
+    build:
+      context: ./open5gs
+      dockerfile: Dockerfile
+    container_name: open5g2go-udm
+    restart: unless-stopped
+    command: open5gs-udmd
+    depends_on:
+      nrf:
+        condition: service_healthy
+    volumes:
+      - ./open5gs/config/udm-hnet.yaml:/etc/open5gs/udm.yaml:ro
+      - ./open5gs/hnet:/etc/open5gs/hnet:ro
+      - open5gs_logs:/var/log/open5gs
+    networks:
+      open5g2go:
+        ipv4_address: 172.26.0.33
+    healthcheck:
+      test: ["CMD", "pgrep", "-f", "open5gs-udmd"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  # AUSF - Authentication Server Function
+  ausf:
+    build:
+      context: ./open5gs
+      dockerfile: Dockerfile
+    container_name: open5g2go-ausf
+    restart: unless-stopped
+    command: open5gs-ausfd
+    depends_on:
+      nrf:
+        condition: service_healthy
+    volumes:
+      - ./open5gs/config/ausf.yaml:/etc/open5gs/ausf.yaml:ro
+      - open5gs_logs:/var/log/open5gs
+    networks:
+      open5g2go:
+        ipv4_address: 172.26.0.32
+    healthcheck:
+      test: ["CMD", "pgrep", "-f", "open5gs-ausfd"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  # PCF - Policy Control Function
+  pcf:
+    build:
+      context: ./open5gs
+      dockerfile: Dockerfile
+    container_name: open5g2go-pcf
+    restart: unless-stopped
+    command: open5gs-pcfd
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      nrf:
+        condition: service_healthy
+    environment:
+      - DB_URI=mongodb://mongodb/open5gs
+    volumes:
+      - ./open5gs/config/pcf.yaml:/etc/open5gs/pcf.yaml:ro
+      - open5gs_logs:/var/log/open5gs
+    networks:
+      open5g2go:
+        ipv4_address: 172.26.0.35
+    healthcheck:
+      test: ["CMD", "pgrep", "-f", "open5gs-pcfd"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  # NSSF - Network Slice Selection Function
+  nssf:
+    build:
+      context: ./open5gs
+      dockerfile: Dockerfile
+    container_name: open5g2go-nssf
+    restart: unless-stopped
+    command: open5gs-nssfd
+    depends_on:
+      nrf:
+        condition: service_healthy
+    volumes:
+      - ./open5gs/config/nssf.yaml:/etc/open5gs/nssf.yaml:ro
+      - open5gs_logs:/var/log/open5gs
+    networks:
+      open5g2go:
+        ipv4_address: 172.26.0.36
+    healthcheck:
+      test: ["CMD", "pgrep", "-f", "open5gs-nssfd"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  # SMF - Session Management Function (PFCP points to UPF on bridge gateway)
+  smf:
+    build:
+      context: ./open5gs
+      dockerfile: Dockerfile
+    container_name: open5g2go-smf
+    restart: unless-stopped
+    command: open5gs-smfd
+    depends_on:
+      nrf:
+        condition: service_healthy
+    volumes:
+      - ./open5gs/config/smf-5g-host.yaml:/etc/open5gs/smf.yaml:ro
+      - open5gs_logs:/var/log/open5gs
+    networks:
+      open5g2go:
+        ipv4_address: 172.26.0.14
+    healthcheck:
+      test: ["CMD", "pgrep", "-f", "open5gs-smfd"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  # =============================================================================
+  # 5G SA Core - Host-mode NFs (physical network access)
+  # =============================================================================
+
+  # AMF - Access and Mobility Management Function (NGAP to gNodeB)
+  # Host mode: SCTP on real host IP, SBI via bridge gateway
+  amf:
+    build:
+      context: ./open5gs
+      dockerfile: Dockerfile
+    container_name: open5g2go-amf
+    restart: unless-stopped
+    network_mode: host
+    command: open5gs-amfd
+    volumes:
+      - ./open5gs/config/amf-host.yaml:/etc/open5gs/amf.yaml:ro
+      - open5gs_logs:/var/log/open5gs
+    healthcheck:
+      test: ["CMD", "pgrep", "-f", "open5gs-amfd"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  # UPF - User Plane Function (GTP-U from gNodeB)
+  # Host mode: GTP-U on real host IP, PFCP via bridge gateway, ogstun on host
+  upf:
+    build:
+      context: ./open5gs
+      dockerfile: Dockerfile
+    container_name: open5g2go-upf
+    restart: unless-stopped
+    network_mode: host
+    privileged: true  # Needed for TUN/iptables in host mode (sysctls not allowed)
+    command: open5gs-upfd
+    volumes:
+      - ./open5gs/config/upf-5g-host.yaml:/etc/open5gs/upf.yaml:ro
+      - open5gs_logs:/var/log/open5gs
+    healthcheck:
+      test: ["CMD", "pgrep", "-f", "open5gs-upfd"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+# =============================================================================
+# Networks
+# =============================================================================
+networks:
+  open5g2go:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.26.0.0/16
+          gateway: 172.26.0.1
+
+# =============================================================================
+# Volumes
+# =============================================================================
+volumes:
+  mongodb_data:
+    driver: local
+  open5gs_logs:
+    driver: local

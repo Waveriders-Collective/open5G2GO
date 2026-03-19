@@ -21,6 +21,7 @@ import type {
   UpdateSubscriberRequest,
   SubscriberOperationResponse,
   EnodebStatusResponse,
+  GnodebStatusResponse,
   ServicesResponse,
 } from '../types/open5gs';
 
@@ -100,9 +101,15 @@ class ApiClient {
     return response.data;
   }
 
-  // Get eNodeB status (S1AP)
+  // Get eNodeB status (S1AP) - 4G mode
   async getEnodebStatus(): Promise<EnodebStatusResponse> {
     const response = await this.client.get<EnodebStatusResponse>('/enodeb/status');
+    return response.data;
+  }
+
+  // Get gNodeB status (NGAP) - 5G mode
+  async getGnodebStatus(): Promise<GnodebStatusResponse> {
+    const response = await this.client.get<GnodebStatusResponse>('/gnodeb/status');
     return response.data;
   }
 

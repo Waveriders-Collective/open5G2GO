@@ -1,0 +1,20 @@
+# Open5GS UDM (Unified Data Management) Configuration
+# Subscriber data management for 5G SA
+
+logger:
+  file:
+    path: /var/log/open5gs/udm.log
+  level: info
+
+global:
+  max:
+    ue: 100
+
+udm:
+  sbi:
+    server:
+      - address: 172.26.0.33
+        port: 7777
+    client:
+      nrf:
+        - uri: http://172.26.0.30:7777

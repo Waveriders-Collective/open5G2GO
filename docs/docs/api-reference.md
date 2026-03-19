@@ -34,8 +34,9 @@ GET /api/v1/health
 ```json
 {
   "status": "healthy",
-  "version": "0.1.0",
-  "service": "Open5G2GO Web API"
+  "version": "0.2.0",
+  "service": "Open5G2GO Web API",
+  "network_mode": "4g"
 }
 ```
 
@@ -59,6 +60,10 @@ GET /api/v1/status
   },
   "enodebs": {
     "total": 1,
+    "list": []
+  },
+  "gnodebs": {
+    "total": 0,
     "list": []
   },
   "health": {
@@ -322,6 +327,13 @@ GET /api/v1/config
     "plmn_id": "315-010",
     "tac": 1
   },
+  "gnodeb_config": {
+    "amf_ip": "10.48.0.110",
+    "ngap_port": 38412,
+    "plmn_id": "315-010",
+    "tac": 1,
+    "sst": 1
+  },
   "apns": {
     "total": 1,
     "list": [
@@ -343,9 +355,9 @@ GET /api/v1/config
 
 ---
 
-## eNodeB Management
+## Base Station Management
 
-### Get eNodeB Status
+### Get eNodeB Status (4G)
 
 Retrieve connected eNodeB status and metrics.
 
@@ -402,6 +414,42 @@ POST /api/v1/enodeb/refresh
   "success": true,
   "message": "SAS status refreshed",
   "timestamp": "2024-01-15 10:30:00 UTC"
+}
+```
+
+### Get gNodeB Status (5G)
+
+Retrieve connected gNodeB status and metrics.
+
+```
+GET /api/v1/gnodeb/status
+```
+
+**Response:**
+```json
+{
+  "timestamp": "2024-01-15 10:30:00 UTC",
+  "ngap": {
+    "available": true,
+    "connected_count": 1,
+    "gnodebs": [
+      {
+        "name": "gNodeB-01",
+        "ip_address": "10.48.0.160",
+        "port": 38412,
+        "connected": true,
+        "connected_at": "2024-01-15 10:30:00"
+      }
+    ]
+  },
+  "network": {
+    "plmn": "315010",
+    "mcc": "315",
+    "mnc": "010",
+    "tac": "1",
+    "sst": 1,
+    "network_name": "Open5G2GO"
+  }
 }
 ```
 
@@ -559,4 +607,5 @@ The MVP does not implement authentication. All endpoints are publicly accessible
 
 | Version | Changes |
 |---------|---------|
+| 0.2.0 | Added 5G SA support: `gnodeb/status` endpoint, `network_mode` in health, `gnodebs` in status, `gnodeb_config` in config, 5G SA Core service category |
 | 0.1.0 | Initial MVP release |

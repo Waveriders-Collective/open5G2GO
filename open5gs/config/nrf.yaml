@@ -1,0 +1,22 @@
+# Open5GS NRF (Network Repository Function) Configuration
+# Service discovery for 5G SA core network functions
+
+logger:
+  file:
+    path: /var/log/open5gs/nrf.log
+  level: info
+
+global:
+  max:
+    ue: 100
+
+nrf:
+  sbi:
+    server:
+      - address: 172.26.0.30
+        port: 7777
+
+  serving:
+    - plmn_id:
+        mcc: "315"
+        mnc: "010"

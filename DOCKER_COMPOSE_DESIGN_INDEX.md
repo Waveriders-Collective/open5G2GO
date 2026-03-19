@@ -208,7 +208,7 @@
 ## MVP Scope (What's Included)
 
 ✓ Single docker-compose.yml orchestrating complete system
-✓ 4G LTE only (no 5G SA)
+✓ 4G LTE + 5G SA (wizard-selectable mode)
 ✓ Support for 10 devices (pool size: 250+)
 ✓ Static IP assignment per device
 ✓ Best-effort QoS (QCI 9)
@@ -229,7 +229,6 @@
 
 ✗ TLS/HTTPS (lab-only environment, MVP)
 ✗ Authentication/authorization (hardcoded token, Phase 2 adds JWT)
-✗ 5G SA (Phase 2)
 ✗ Advanced QoS policies (Phase 2)
 ✗ MongoDB authentication (Phase 2)
 ✗ Prometheus metrics (Phase 2)
@@ -267,7 +266,20 @@
 
 ---
 
-## Files in This Package
+## Compose Files
+
+The project includes separate compose files for each network mode:
+
+| File | Purpose |
+|------|---------|
+| `docker-compose.yml` | 4G EPC development stack |
+| `docker-compose.prod.yml` | 4G EPC production stack |
+| `docker-compose.5g.yml` | 5G SA development stack |
+| `docker-compose.5g.prod.yml` | 5G SA production stack |
+
+The setup wizard and `pull-and-run.sh` script automatically select the correct compose file based on the configured `NETWORK_MODE`.
+
+## Design Documents
 
 ```
 plans/

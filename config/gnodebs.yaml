@@ -1,0 +1,18 @@
+# =============================================================================
+# gNodeB Configuration for Open5G2GO (5G SA Mode)
+# =============================================================================
+#
+# This file defines the gNodeBs in your 5G SA deployment.
+# Used for NGAP connection tracking and status display.
+#
+# Configuration is read at startup. Restart the backend service after changes.
+#
+
+gnodebs:
+  # No gNodeBs configured during setup.
+  # Add your gNodeB(s) here or run the setup wizard with 5G mode.
+  #
+  # Example:
+  # - name: "gNodeB-1"
+  #   ip_address: "10.48.0.159"
+  #   location: "Test Lab"

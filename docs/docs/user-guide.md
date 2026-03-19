@@ -1,6 +1,6 @@
 # User Guide
 
-This guide covers how to use the Open5G2GO web interface to manage your private 4G network.
+This guide covers how to use the Open5G2GO web interface to manage your private 4G/5G network.
 
 ## Accessing the UI
 
@@ -32,24 +32,33 @@ At the top, four cards show key metrics:
 | **Provisioned Devices** | Total devices added to the system |
 | **Registered UEs** | Devices currently registered with the network |
 | **Connected Devices** | Devices with active data sessions |
-| **Connected eNodeBs** | Base stations connected via S1AP |
+| **Connected eNodeBs/gNodeBs** | Base stations connected via S1AP (4G) or NGAP (5G) |
 
 ### System Health
 
 Shows operational status of core components:
 
 - **Core Status** - Whether Open5GS services are running
-- **eNodeB Connection** - Whether any base station is connected
+- **eNodeB/gNodeB Connection** - Whether any base station is connected
 - **Active Sessions** - Whether any devices have active data sessions
 
-### eNodeB Status
+### eNodeB Status (4G Mode)
 
-Displays connected base stations with detailed metrics (if SNMP is configured):
+Displays connected eNodeBs with detailed metrics (if SNMP is configured):
 
 - **Cell** - RF status, band, frequency, TX power
 - **Core** - S1AP link status, TAC, Cell ID, PCI
 - **Traffic** - Connected UE count, throughput (DL/UL), PRB usage
 - **Health** - Alarms, CPU utilization, RRC/E-RAB success rates
+
+### gNodeB Status (5G Mode)
+
+Displays connected gNodeBs with NGAP connection details:
+
+- **NGAP Link** - Connection status to AMF
+- **PLMN** - Configured PLMN identity
+- **TAC** - Tracking Area Code
+- **SST** - Network Slice/Service Type
 
 ### Active Connections
 
@@ -138,9 +147,9 @@ Core network identifiers (configured during setup wizard):
 
 **Note:** PLMN is selected during the setup wizard and must match your SIM cards.
 
-### eNodeB Configuration
+### eNodeB Configuration (4G Mode)
 
-Settings to use when configuring your base station:
+Settings to use when configuring your 4G base station:
 
 | Setting | Value |
 |---------|-------|
@@ -150,6 +159,20 @@ Settings to use when configuring your base station:
 | TAC | 1 |
 
 Copy these values to your eNodeB's configuration interface.
+
+### gNodeB Configuration (5G Mode)
+
+Settings to use when configuring your 5G base station:
+
+| Setting | Value |
+|---------|-------|
+| AMF IP Address | Your Docker host IP |
+| NGAP Port | 38412 |
+| PLMN ID | 315010 |
+| TAC | 1 |
+| SST | 1 |
+
+Copy these values to your gNodeB's configuration interface.
 
 ### Access Point Names (APNs)
 
@@ -179,9 +202,9 @@ Quick status overview:
 
 ### Service Categories
 
-Services are grouped by function:
+Services are grouped by function. The categories shown depend on your network mode.
 
-**4G EPC Core:**
+**4G EPC Core** (4G mode):
 - **HSS** - Home Subscriber Server (authentication)
 - **MME** - Mobility Management Entity (signaling)
 - **SGWC** - Serving Gateway Control Plane
@@ -189,6 +212,17 @@ Services are grouped by function:
 - **SMF** - Session Management Function
 - **UPF** - User Plane Function
 - **PCRF** - Policy and Charging Rules
+
+**5G SA Core** (5G mode):
+- **AMF** - Access and Mobility Management Function
+- **NRF** - Network Repository Function (service discovery)
+- **UDM** - Unified Data Management
+- **UDR** - Unified Data Repository
+- **AUSF** - Authentication Server Function
+- **PCF** - Policy Control Function
+- **NSSF** - Network Slice Selection Function
+- **SMF** - Session Management Function
+- **UPF** - User Plane Function
 
 **Management:**
 - **Backend** - REST API server
@@ -224,11 +258,11 @@ Click **Refresh** to update status immediately.
 2. Look at the **Active Connections** table
 3. Your device should appear with status "CONNECTED"
 
-### Verify eNodeB Connection
+### Verify Base Station Connection
 
 1. Go to **Dashboard**
-2. Check **System Health** > **eNodeB Connection** shows "Connected"
-3. Check **eNodeB Status** section shows your base station
+2. Check **System Health** > **eNodeB/gNodeB Connection** shows "Connected"
+3. Check **eNodeB Status** (4G) or **gNodeB Status** (5G) section shows your base station
 
 ### Troubleshoot a Device Not Connecting
 

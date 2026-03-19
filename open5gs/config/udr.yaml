@@ -1,0 +1,22 @@
+# Open5GS UDR (Unified Data Repository) Configuration
+# Data repository for subscriber data (reads MongoDB)
+
+logger:
+  file:
+    path: /var/log/open5gs/udr.log
+  level: info
+
+global:
+  max:
+    ue: 100
+
+udr:
+  sbi:
+    server:
+      - address: 172.26.0.34
+        port: 7777
+    client:
+      nrf:
+        - uri: http://172.26.0.30:7777
+
+db_uri: mongodb://localhost/open5gs

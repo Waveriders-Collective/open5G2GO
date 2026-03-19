@@ -2,7 +2,7 @@
 
 **React + TypeScript + Tailwind CSS**
 
-Modern, responsive web interface for Open5GS 4G mobile core management with Waveriders branding.
+Modern, responsive web interface for Open5GS 4G/5G mobile core management with Waveriders branding.
 
 ---
 

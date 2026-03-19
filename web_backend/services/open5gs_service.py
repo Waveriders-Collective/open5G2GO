@@ -18,6 +18,7 @@ from pathlib import Path
 
 from opensurfcontrol.mongodb_client import Open5GSClient, get_client
 from opensurfcontrol.mme_client import get_mme_parser
+from opensurfcontrol.amf_client import get_amf_parser
 from opensurfcontrol.snmp_client import get_snmp_client
 from opensurfcontrol.constants import (
     DEFAULT_APN,
@@ -29,6 +30,9 @@ from opensurfcontrol.constants import (
     MCC,
     MNC,
     TAC,
+    NETWORK_MODE,
+    NGAP_PORT,
+    DEFAULT_SST,
     NETWORK_NAME_SHORT,
     UE_POOL_START,
     UE_POOL_END,
@@ -367,7 +371,9 @@ class Open5GSService:
 
     async def get_system_status(self) -> Dict[str, Any]:
         """
-        Get system status including eNodeB connections and UE sessions from MME logs.
+        Get system status including RAN connections and UE sessions.
+
+        Reads from MME logs (4G) or AMF logs (5G) depending on NETWORK_MODE.
 
         Returns:
             System status information.
@@ -375,46 +381,54 @@ class Open5GSService:
         try:
             status = self.client.get_system_status()
             health_ok = self.client.health_check()
+            is_5g = NETWORK_MODE == "5g"
 
-            # Get eNodeB connection status from MME logs
-            mme_parser = get_mme_parser()
-            enodebs = mme_parser.get_connected_enodebs()
-            enb_count = len(enodebs)
-
-            # Get UE session counts from MME logs
-            ue_count = mme_parser.get_ue_count()
-            session_count = mme_parser.get_session_count()
+            if is_5g:
+                amf_parser = get_amf_parser()
+                ran_nodes = amf_parser.get_connected_gnodebs()
+                ran_count = len(ran_nodes)
+                ue_count = amf_parser.get_ue_count()
+                session_count = amf_parser.get_session_count()
+            else:
+                mme_parser = get_mme_parser()
+                ran_nodes = mme_parser.get_connected_enodebs()
+                ran_count = len(ran_nodes)
+                ue_count = mme_parser.get_ue_count()
+                session_count = mme_parser.get_session_count()
 
             # Determine operational status
-            has_enodebs = enb_count > 0
+            has_ran = ran_count > 0
             has_connections = session_count > 0
 
-            if health_ok and has_enodebs and has_connections:
+            if health_ok and has_ran and has_connections:
                 operational_status = "fully_operational"
-            elif health_ok and has_enodebs:
+            elif health_ok and has_ran:
                 operational_status = "core_and_network_ready"
             elif health_ok:
                 operational_status = "core_ready"
             else:
                 operational_status = "core_down"
 
+            ran_key = "gnodebs" if is_5g else "enodebs"
+
             return {
                 "timestamp": self._timestamp(),
                 "system_name": "Open5G2GO",
+                "network_mode": NETWORK_MODE,
                 "subscribers": {
                     "provisioned": status.get("total_subscribers", 0),
                     "registered": ue_count,
                     "connected": session_count
                 },
-                "enodebs": {
-                    "total": enb_count,
-                    "list": enodebs
+                ran_key: {
+                    "total": ran_count,
+                    "list": ran_nodes
                 },
                 "health": {
                     "core_operational": health_ok,
                     "database_connected": status.get("connection") == "connected",
                     "has_active_connections": has_connections,
-                    "enodebs_connected": has_enodebs,
+                    f"{ran_key}_connected": has_ran,
                     "operational_status": operational_status
                 }
             }
@@ -422,49 +436,188 @@ class Open5GSService:
             logger.error(f"Error getting system status: {e}")
             return {"error": str(e), "timestamp": self._timestamp()}
 
+    async def get_gnodeb_status(self) -> Dict[str, Any]:
+        """
+        Get gNodeB connection status from AMF logs (5G mode).
+
+        Returns:
+            gNodeB connection information.
+        """
+        try:
+            amf_parser = get_amf_parser()
+            ngap_connections = amf_parser.get_connected_gnodebs()
+            ngap_available = amf_parser.is_available()
+
+            # Load gNodeB configuration
+            gnodeb_config = self._load_gnodeb_config()
+            configured_gnodebs = gnodeb_config.get("gnodebs", [])
+
+            connected_ips = {conn.get("ip") for conn in ngap_connections}
+
+            ngap_gnodebs = []
+            for gnb_config in configured_gnodebs:
+                config_ip = gnb_config.get("ip_address", "")
+                is_connected = config_ip in connected_ips
+
+                gnb_ip = config_ip
+                connected_at = None
+                port = None
+                sctp_streams = None
+
+                for conn in ngap_connections:
+                    conn_ip = conn.get("ip")
+                    if conn_ip == config_ip or (len(configured_gnodebs) == 1):
+                        gnb_ip = conn_ip or config_ip
+                        connected_at = conn.get("connected_at")
+                        port = conn.get("port", 38412)
+                        sctp_streams = conn.get("sctp_streams")
+                        break
+
+                ngap_gnodebs.append({
+                    "config_name": gnb_config.get("name", f"gNodeB-{config_ip}"),
+                    "location": gnb_config.get("location", ""),
+                    "ip_address": gnb_ip,
+                    "port": port,
+                    "sctp_streams": sctp_streams,
+                    "connected": is_connected,
+                    "connected_at": connected_at,
+                })
+
+            return {
+                "timestamp": self._timestamp(),
+                "ngap": {
+                    "available": ngap_available,
+                    "connected_count": len(ngap_connections),
+                    "gnodebs": ngap_gnodebs,
+                    "raw_connections": ngap_connections,
+                },
+                "network": {
+                    "plmn": PLMNID,
+                    "mcc": MCC,
+                    "mnc": MNC,
+                    "tac": TAC,
+                    "network_name": NETWORK_NAME_SHORT,
+                }
+            }
+        except Exception as e:
+            logger.error(f"Error getting gNodeB status: {e}")
+            return {
+                "timestamp": self._timestamp(),
+                "error": str(e),
+                "ngap": {
+                    "available": False,
+                    "connected_count": 0,
+                    "gnodebs": [],
+                },
+            }
+
+    def _load_gnodeb_config(self) -> Dict[str, Any]:
+        """Load gNodeB configuration from YAML file."""
+        search_paths = [
+            Path("/app/config/gnodebs.yaml"),
+            Path("config/gnodebs.yaml"),
+            Path("../config/gnodebs.yaml"),
+        ]
+
+        config_path_env = os.getenv("GNODEB_CONFIG_PATH")
+        if config_path_env:
+            search_paths.insert(0, Path(config_path_env))
+
+        for path in search_paths:
+            if path.exists():
+                try:
+                    with open(path, 'r') as f:
+                        config = yaml.safe_load(f)
+                    return config or {}
+                except Exception as e:
+                    logger.warning(f"Failed to parse {path}: {e}")
+
+        return {"gnodebs": []}
+
     async def get_network_config(self) -> Dict[str, Any]:
         """
         Get network configuration from actual Open5GS config files.
 
         Reads from:
-        - mme.yaml: PLMN, TAC, network name, S1AP port
-        - smf.yaml: APN/DNN, UE IP pool
-        - sgwu.yaml: GTP-U advertise IP (fallback for host IP)
+        - 4G: mme.yaml (PLMN, TAC, S1AP), sgwu.yaml (advertise IP)
+        - 5G: amf.yaml (PLMN, TAC, NGAP), upf-5g.yaml (advertise IP)
+        - smf.yaml: APN/DNN, UE IP pool (both modes)
 
         Returns:
-            Network configuration details including eNodeB settings.
+            Network configuration details including eNodeB/gNodeB settings.
         """
-        # Load actual Open5GS config files
-        mme_config = load_open5gs_config("mme")
-        smf_config = load_open5gs_config("smf")
-        sgwu_config = load_open5gs_config("sgwu")
+        is_5g = NETWORK_MODE == "5g"
 
-        # Extract MME config values with fallbacks to constants
+        smf_config = load_open5gs_config("smf")
+
+        # Extract PLMN, TAC, network name from the appropriate control plane NF
         mcc = MCC
         mnc = MNC
         tac = TAC
         network_name = NETWORK_NAME_SHORT
-        mme_port = 36412
 
-        if mme_config:
-            mme = mme_config.get("mme", {})
-            # Get PLMN from TAI config
-            tai_list = mme.get("tai", [])
-            if tai_list:
-                plmn = tai_list[0].get("plmn_id", {})
-                mcc = plmn.get("mcc", MCC)
-                mnc = plmn.get("mnc", MNC)
-                tac = tai_list[0].get("tac", TAC)
-            # Get network name (prefer full name)
-            network_name_cfg = mme.get("network_name", {})
-            network_name = network_name_cfg.get("full", NETWORK_NAME_SHORT)
-            # Get S1AP port
-            s1ap = mme.get("s1ap", {})
-            servers = s1ap.get("server", [])
-            if servers:
-                mme_port = servers[0].get("port", 36412)
+        if is_5g:
+            amf_config = load_open5gs_config("amf")
+            amf_port = NGAP_PORT
 
-        # Extract SMF/APN config
+            if amf_config:
+                amf = amf_config.get("amf", {})
+                tai_list = amf.get("tai", [])
+                if tai_list:
+                    plmn = tai_list[0].get("plmn_id", {})
+                    mcc = plmn.get("mcc", MCC)
+                    mnc = plmn.get("mnc", MNC)
+                    tac = tai_list[0].get("tac", TAC)
+                network_name_cfg = amf.get("network_name", {})
+                network_name = network_name_cfg.get("full", NETWORK_NAME_SHORT)
+                ngap = amf.get("ngap", {})
+                servers = ngap.get("server", [])
+                if servers:
+                    amf_port = servers[0].get("port", NGAP_PORT)
+
+            # Get host IP from UPF advertise address for 5G
+            host_ip = os.getenv("HOST_IP")
+            if not host_ip:
+                upf_config = load_open5gs_config("upf")
+                if upf_config:
+                    upf = upf_config.get("upf", {})
+                    gtpu = upf.get("gtpu", {})
+                    servers = gtpu.get("server", [])
+                    if servers:
+                        host_ip = servers[0].get("advertise")
+            if not host_ip:
+                host_ip = "10.48.0.110"
+        else:
+            mme_config = load_open5gs_config("mme")
+            sgwu_config = load_open5gs_config("sgwu")
+            mme_port = 36412
+
+            if mme_config:
+                mme = mme_config.get("mme", {})
+                tai_list = mme.get("tai", [])
+                if tai_list:
+                    plmn = tai_list[0].get("plmn_id", {})
+                    mcc = plmn.get("mcc", MCC)
+                    mnc = plmn.get("mnc", MNC)
+                    tac = tai_list[0].get("tac", TAC)
+                network_name_cfg = mme.get("network_name", {})
+                network_name = network_name_cfg.get("full", NETWORK_NAME_SHORT)
+                s1ap = mme.get("s1ap", {})
+                servers = s1ap.get("server", [])
+                if servers:
+                    mme_port = servers[0].get("port", 36412)
+
+            host_ip = os.getenv("HOST_IP")
+            if not host_ip and sgwu_config:
+                sgwu = sgwu_config.get("sgwu", {})
+                gtpu = sgwu.get("gtpu", {})
+                servers = gtpu.get("server", [])
+                if servers:
+                    host_ip = servers[0].get("advertise")
+            if not host_ip:
+                host_ip = "10.48.0.110"
+
+        # Extract SMF/APN config (same for both modes)
         apn_name = DEFAULT_APN
         ue_subnet = None
         ue_gateway = None
@@ -477,35 +630,19 @@ class Open5GSService:
                 ue_subnet = sessions[0].get("subnet")
                 ue_gateway = sessions[0].get("gateway")
 
-        # Get host IP: prefer HOST_IP env var, fallback to sgwu advertise IP
-        host_ip = os.getenv("HOST_IP")
-        if not host_ip and sgwu_config:
-            sgwu = sgwu_config.get("sgwu", {})
-            gtpu = sgwu.get("gtpu", {})
-            servers = gtpu.get("server", [])
-            if servers:
-                host_ip = servers[0].get("advertise")
-        if not host_ip:
-            host_ip = "10.48.0.110"  # Final fallback
-
         # Build PLMNID string
         plmnid = f"{mcc}{mnc}"
 
-        return {
+        result = {
             "timestamp": self._timestamp(),
-            "host": host_ip,  # Open5GS reachable interface (MME IP)
+            "host": host_ip,
+            "network_mode": NETWORK_MODE,
             "network_identity": {
                 "plmnid": plmnid,
                 "mcc": mcc,
                 "mnc": mnc,
                 "network_name": network_name,
                 "tac": str(tac)
-            },
-            "enodeb_config": {
-                "mme_ip": host_ip,
-                "mme_port": mme_port,
-                "plmn_id": f"{mcc}-{mnc}",
-                "tac": tac,
             },
             "apns": {
                 "total": 1,
@@ -525,16 +662,38 @@ class Open5GSService:
             }
         }
 
+        if is_5g:
+            result["gnodeb_config"] = {
+                "amf_ip": host_ip,
+                "amf_port": amf_port,
+                "plmn_id": f"{mcc}-{mnc}",
+                "tac": tac,
+                "sst": DEFAULT_SST,
+            }
+        else:
+            result["enodeb_config"] = {
+                "mme_ip": host_ip,
+                "mme_port": mme_port,
+                "plmn_id": f"{mcc}-{mnc}",
+                "tac": tac,
+            }
+
+        return result
+
     async def get_active_connections(self) -> Dict[str, Any]:
         """
-        Get active UE connections from MME log parsing.
+        Get active UE connections from MME (4G) or AMF (5G) log parsing.
 
         Returns:
             Active connections information with session details.
         """
         try:
-            mme_parser = get_mme_parser()
-            sessions = mme_parser.get_ue_sessions()
+            is_5g = NETWORK_MODE == "5g"
+            if is_5g:
+                parser = get_amf_parser()
+            else:
+                parser = get_mme_parser()
+            sessions = parser.get_ue_sessions()
 
             # Enrich sessions with subscriber info from MongoDB
             enriched_connections = []
@@ -554,15 +713,16 @@ class Open5GSService:
                 except Exception:
                     pass
 
-                # Map to frontend expected field names
-                state = session.get("state", "attached")
-                cm_state = "CONNECTED" if state == "attached" else "IDLE"
+                # Normalize field names: 5G uses "dnn"/"registered", 4G uses "apn"/"attached"
+                apn = session.get("apn") or session.get("dnn", "internet")
+                state = session.get("state", "")
+                cm_state = "CONNECTED" if state in ("attached", "registered") else "IDLE"
 
                 enriched_connections.append({
                     "imsi": imsi,
                     "name": device_name or f"Device-{imsi[-4:]}",
                     "ip": session.get("ip_address"),
-                    "apn": session.get("apn", "internet"),
+                    "apn": apn,
                     "cm_state": cm_state,
                     "attached_at": session.get("attached_at"),
                 })

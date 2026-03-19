@@ -1,0 +1,31 @@
+# Open5GS UDM (Unified Data Management) Configuration
+# HNET variant - includes home network key configuration for SUCI decryption
+# Required for 5G-AKA authentication with SIM cards that use SUPI concealment
+
+logger:
+  file:
+    path: /var/log/open5gs/udm.log
+  level: info
+
+global:
+  max:
+    ue: 100
+
+udm:
+  hnet:
+    # Key ID 1 - SurfSIM / standard test SIMs
+    - id: 1
+      scheme: 1  # Profile A (ECIES with curve25519)
+      key: /etc/open5gs/hnet/curve25519-1.key
+    # Key ID 2 - Additional key slot (e.g., Seneca or other SIM vendors)
+    - id: 2
+      scheme: 1
+      key: /etc/open5gs/hnet/curve25519-2.key
+
+  sbi:
+    server:
+      - address: 172.26.0.33
+        port: 7777
+    client:
+      nrf:
+        - uri: http://172.26.0.30:7777

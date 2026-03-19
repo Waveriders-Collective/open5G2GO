@@ -19,9 +19,8 @@ cd "$PROJECT_DIR"
 setup_host_networking() {
     echo "Configuring host networking for UE data path..."
 
-    # UE subnet and UPF container IP (on Docker bridge)
+    # UE subnet
     UE_SUBNET="10.48.99.0/24"
-    UPF_IP="172.26.0.15"
 
     # Detect primary interface (the one with default route)
     PRIMARY_IF=$(ip route | grep default | awk '{print $5}' | head -1)
@@ -36,16 +35,29 @@ setup_host_networking() {
         sysctl -w net.ipv4.ip_forward=1 > /dev/null
     fi
 
-    # Add route for UE subnet via UPF container
-    if ! ip route show | grep -q "$UE_SUBNET"; then
-        echo "  Adding route for UE subnet ($UE_SUBNET) via UPF ($UPF_IP)..."
-        ip route add $UE_SUBNET via $UPF_IP 2>/dev/null || true
-    fi
+    if [ "$NETWORK_MODE" = "5g" ]; then
+        # 5G mode: UPF runs in host mode — ogstun is on the host directly.
+        # The UPF entrypoint handles iptables FORWARD and MASQUERADE rules.
+        # We only need to ensure ip_forward is enabled (done above) and
+        # load the SCTP kernel module for AMF's NGAP interface.
+        echo "  5G host-mode: UPF handles its own routing via entrypoint"
+        echo "  Loading SCTP kernel module..."
+        modprobe sctp 2>/dev/null || true
+    else
+        # 4G mode: UPF/SGWU on Docker bridge — host needs route via bridge IP
+        UPF_IP="172.26.0.15"
 
-    # Add NAT rule for UE subnet
-    if ! iptables -t nat -C POSTROUTING -s $UE_SUBNET -o $PRIMARY_IF -j MASQUERADE 2>/dev/null; then
-        echo "  Adding NAT rule for UE subnet on $PRIMARY_IF..."
-        iptables -t nat -A POSTROUTING -s $UE_SUBNET -o $PRIMARY_IF -j MASQUERADE
+        # Add route for UE subnet via UPF container
+        if ! ip route show | grep -q "$UE_SUBNET"; then
+            echo "  Adding route for UE subnet ($UE_SUBNET) via UPF ($UPF_IP)..."
+            ip route add $UE_SUBNET via $UPF_IP 2>/dev/null || true
+        fi
+
+        # Add NAT rule for UE subnet
+        if ! iptables -t nat -C POSTROUTING -s $UE_SUBNET -o $PRIMARY_IF -j MASQUERADE 2>/dev/null; then
+            echo "  Adding NAT rule for UE subnet on $PRIMARY_IF..."
+            iptables -t nat -A POSTROUTING -s $UE_SUBNET -o $PRIMARY_IF -j MASQUERADE
+        fi
     fi
 
     echo "  Host networking configured successfully"
@@ -62,11 +74,28 @@ fi
 # Docker Compose Deployment
 # =============================================================================
 
+# Determine compose file from .env or default
+NETWORK_MODE=$(grep NETWORK_MODE .env 2>/dev/null | cut -d= -f2 || echo "4g")
+COMPOSE_FILE=$(grep COMPOSE_FILE .env 2>/dev/null | cut -d= -f2 || echo "docker-compose.prod.yml")
+
+# Fallback: derive compose file from network mode if not set
+if [ -z "$COMPOSE_FILE" ] || [ ! -f "$COMPOSE_FILE" ]; then
+    if [ "$NETWORK_MODE" = "5g" ]; then
+        COMPOSE_FILE="docker-compose.5g.prod.yml"
+    else
+        COMPOSE_FILE="docker-compose.prod.yml"
+    fi
+fi
+
+echo "Network mode: ${NETWORK_MODE}"
+echo "Compose file: ${COMPOSE_FILE}"
+echo ""
+
 echo "Pulling Docker images from ghcr.io..."
-docker compose -f docker-compose.prod.yml pull
+docker compose -f "$COMPOSE_FILE" pull
 
 echo "Starting Open5G2GO stack..."
-docker compose -f docker-compose.prod.yml up -d
+docker compose -f "$COMPOSE_FILE" up -d
 
 echo "Waiting for services to become healthy..."
 sleep 10
@@ -98,6 +127,14 @@ echo ""
 echo "  Web UI: http://${HOST_IP}:8080"
 echo "  API:    http://${HOST_IP}:8080/api/v1"
 echo ""
-echo "  View logs: docker compose -f docker-compose.prod.yml logs -f"
-echo "  Stop:      docker compose -f docker-compose.prod.yml down"
+if [ "$NETWORK_MODE" = "5g" ]; then
+    echo "  gNodeB NGAP: ${HOST_IP}:38412 (SCTP)"
+    echo "  GTP-U (N3):  ${HOST_IP}:2152 (UDP)"
+else
+    echo "  eNodeB S1AP: ${HOST_IP}:36412 (SCTP)"
+    echo "  GTP-U:       ${HOST_IP}:2152 (UDP)"
+fi
+echo ""
+echo "  View logs: docker compose -f $COMPOSE_FILE logs -f"
+echo "  Stop:      docker compose -f $COMPOSE_FILE down"
 echo ""
