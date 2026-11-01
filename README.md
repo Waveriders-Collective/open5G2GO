@@ -13,8 +13,8 @@ The setup wizard will prompt you for the following information. Have these ready
 
 | Item | Description | Where to Get It |
 |------|-------------|-----------------|
-| **SIM Ki Key** | 32-character hex authentication key | From your SIM vendor |
-| **SIM OPc Key** | 32-character hex operator key | From your SIM vendor |
+| **SIM Ki Key** | 32-character hex authentication key | From your SIM vendor, or generate for a programmable SIM during setup |
+| **SIM OPc Key** | 32-character hex derived operator key | From your SIM vendor, or derive with Ki and a generated source OP during setup |
 | **PLMN** | Network identity (MCC-MNC) matching your SIMs | Usually 315-010 for US CBRS |
 | **eNodeB/gNodeB IP Address** | Management IP of your base station | From base station web interface or DHCP |
 | **Host IP Address** | IP of the machine running Open5G2GO | Auto-detected, but verify it's reachable from base station |
@@ -153,7 +153,31 @@ Single-page application with:
 
 ## SIM Configuration
 
-You need pre-programmed SIM cards with Ki and OPc authentication keys.
+Use a vendor-programmed SIM with known Ki and OPc, or a SIM you can program with
+matching credentials. Generating new credentials cannot recover the keys on an
+existing SIM.
+
+During full setup, choose either existing Ki/OPc values (saved in `.env` as
+subscriber defaults) or **generate Ki, source OP, and OPc**. Generation uses secure
+random 128-bit Ki and OP values and derives Milenage OPc as
+`AES-128(Ki, OP) XOR OP`, following
+[3GPP TS 35.206](https://www.etsi.org/deliver/etsi_ts/135200_135299/135206/18.00.00_60/ts_135206v180000p.pdf).
+If needed, setup asks permission to install the optional `python3` and
+`python3-cryptography` packages on Ubuntu/Debian.
+
+Generated credentials appear **once, directly in the terminal**. The wizard warns
+you to save all three securely and requires you to type `COPIED` before continuing.
+Blank or other responses repeat only the confirmation prompt; `CANCEL` or end of
+input stops setup before configuration is written. After confirmation, **Ki and
+OPc are saved in `.env`** as the normal subscriber defaults, so web UI provisioning
+works with the generated values. The wizard restricts `.env` and `.env.backup`
+permissions to the owner. Network-only reconfiguration preserves these defaults.
+
+**Source OP is never saved.** It remains in the generator process and its one
+terminal display; it is never returned to the wizard, put in `.env` or backups,
+or passed to Docker. Keep your own secure copy for SIM programming. Terminal
+scrollback or session recording may retain the display. Program your SIM with
+matching credentials before using the subscriber provisioned by the core.
 
 **Requirements:**
 - Ki (Authentication Key) - 32 hex characters

@@ -4,6 +4,8 @@
 # scripts/setup-wizard.sh - Open5G2GO Interactive Setup Wizard
 # Generates .env file from env.example with user-provided values
 
+# Authentication values must not be repeated in shell trace output.
+set +x
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -120,6 +122,68 @@ validate_hex_key() {
         return 1
     fi
     return 0
+}
+
+# Generation is optional; manual key entry does not need Python cryptography.
+find_sim_key_python() {
+    local candidate
+    for candidate in python3 /usr/bin/python3; do
+        if command -v "$candidate" > /dev/null 2>&1 && \
+            "$candidate" -B -c 'import sys; from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes; sys.exit(sys.version_info < (3, 10))' < /dev/null 2>/dev/null; then
+            printf '%s\n' "$candidate"
+            return 0
+        fi
+    done
+    return 1
+}
+
+ensure_sim_key_generator() {
+    local approval="" ID=""
+    local root_command=()
+    if SIM_KEY_PYTHON=$(find_sim_key_python); then
+        return 0
+    fi
+
+    echo "SIM key generation requires Python 3.10+ and the cryptography package."
+    if [ -r /etc/os-release ]; then
+        . /etc/os-release
+    fi
+    case "$ID" in
+        ubuntu|debian) ;;
+        *)
+            echo "Install Python 3.10+ and cryptography for your system, then rerun setup."
+            return 1
+            ;;
+    esac
+    if ! command -v apt-get > /dev/null 2>&1; then
+        echo "apt-get is unavailable; install python3 and python3-cryptography manually."
+        return 1
+    fi
+    if [ "$EUID" -ne 0 ]; then
+        if ! command -v sudo > /dev/null 2>&1; then
+            echo "sudo is required to install python3 and python3-cryptography."
+            return 1
+        fi
+        root_command=(sudo)
+    fi
+
+    echo "The installer can refresh apt and install: python3 python3-cryptography"
+    if ! read -r -p "Install these optional packages now? [y/N]: " approval; then
+        return 1
+    fi
+    case "$approval" in
+        [yY]|[yY][eE][sS]) ;;
+        *) echo "Optional dependency installation cancelled."; return 1 ;;
+    esac
+    if ! "${root_command[@]}" apt-get update < /dev/null || \
+        ! "${root_command[@]}" env DEBIAN_FRONTEND=noninteractive apt-get install -y --no-remove python3 python3-cryptography < /dev/null; then
+        echo "Could not install SIM key generation dependencies. Setup stopped."
+        return 1
+    fi
+    if ! SIM_KEY_PYTHON=$(find_sim_key_python); then
+        echo "Python cryptography is still unavailable. Setup stopped."
+        return 1
+    fi
 }
 
 # Validate IP address
@@ -250,32 +314,70 @@ if [ "$SETUP_MODE" = "full" ]; then
     echo -e "${BLUE}Step 4: SIM Configuration${NC}"
     echo "─────────────────────────────────"
     echo ""
-    echo "You need pre-programmed SIM cards with Ki and OPc authentication keys."
+    echo "Use your SIM vendor's Ki and OPc, or generate values for a SIM you can program."
     echo ""
-    echo "Ki (Authentication Key) and OPc (Operator Key) are cryptographic keys"
-    echo "programmed into your SIM cards. Your SIM vendor provides these values."
+    echo "The SIM and its subscriber record must use matching authentication keys."
+    echo "Generating new values cannot recover the keys from an existing SIM."
     echo ""
     echo -e "  Need SIMs? Order at: ${YELLOW}https://waveriders.live/sims${NC}"
     echo ""
-    echo "Enter your SIM authentication keys (32 hex characters each):"
-    echo ""
-
     while true; do
-        read -p "  Ki:  " OPEN5GS_DEFAULT_K
-        if validate_hex_key "$OPEN5GS_DEFAULT_K" "Ki"; then
-            break
+        echo "  [1] Enter existing Ki and OPc (saved as defaults in .env)"
+        echo "  [2] Generate Ki and OPc (saved in .env); source OP shown once, never saved"
+        echo "  [Q] Cancel setup"
+        echo ""
+        if ! read -r -p "Choice [1]: " sim_key_choice; then
+            echo "Setup cancelled."
+            exit 1
         fi
+        case "${sim_key_choice:-1}" in
+            1)
+                echo "Enter your SIM authentication keys (32 hex characters each):"
+                while true; do
+                    read -r -s -p "  Ki:  " OPEN5GS_DEFAULT_K
+                    echo ""
+                    if validate_hex_key "$OPEN5GS_DEFAULT_K" "Ki"; then
+                        break
+                    fi
+                done
+                while true; do
+                    read -r -s -p "  OPc: " OPEN5GS_DEFAULT_OPC
+                    echo ""
+                    if validate_hex_key "$OPEN5GS_DEFAULT_OPC" "OPc"; then
+                        break
+                    fi
+                done
+                echo -e "SIM keys configured: ${GREEN}OK${NC}"
+                break
+                ;;
+            2)
+                echo ""
+                echo "Ki and OPc will be saved in .env as subscriber defaults after confirmation."
+                echo "Source OP is shown once and never saved. Copy all three values securely."
+                echo "You must program your SIM with matching credentials."
+                if ! ensure_sim_key_generator; then
+                    exit 1
+                fi
+                # Only confirmed Ki/OPc cross the pipe. Source OP stays in the
+                # helper and its one terminal display; it never enters the shell.
+                if ! generated_sim_defaults=$("$SIM_KEY_PYTHON" -B "$SCRIPT_DIR/generate-sim-keys.py" --credentials-fd 3 3>&1 > /dev/null); then
+                    echo "SIM key generation was not confirmed. Setup stopped."
+                    exit 1
+                fi
+                if [[ ! "$generated_sim_defaults" =~ ^[0-9A-Fa-f]{32}:[0-9A-Fa-f]{32}$ ]]; then
+                    echo "Invalid SIM credential handoff. Setup stopped without saving values."
+                    unset generated_sim_defaults
+                    exit 1
+                fi
+                OPEN5GS_DEFAULT_K="${generated_sim_defaults%%:*}"
+                OPEN5GS_DEFAULT_OPC="${generated_sim_defaults#*:}"
+                unset generated_sim_defaults
+                break
+                ;;
+            [qQ]) echo "Setup cancelled."; exit 1 ;;
+            *) echo "Choose 1, 2, or Q." ;;
+        esac
     done
-
-    while true; do
-        read -p "  OPc: " OPEN5GS_DEFAULT_OPC
-        if validate_hex_key "$OPEN5GS_DEFAULT_OPC" "OPc"; then
-            break
-        fi
-    done
-
-    echo ""
-    echo -e "SIM keys configured: ${GREEN}OK${NC}"
 else
     # Network reconfiguration mode - use preserved values
     OPEN5GS_DEFAULT_K="$PRESERVED_K"
@@ -442,11 +544,18 @@ echo ""
 
 # Backup existing .env if present (we already confirmed mode at the start)
 if [ -f ".env" ]; then
+    chmod 600 .env
+    if [ -f ".env.backup" ]; then
+        chmod 600 .env.backup
+    fi
     cp .env .env.backup
+    chmod 600 .env.backup
     echo "Backup saved to .env.backup"
 fi
 
 # Generate .env file
+(
+umask 077
 cat > .env << EOF
 # Open5G2GO Environment Configuration
 # Generated by setup-wizard.sh on $(date -Iseconds)
@@ -491,6 +600,7 @@ MNC=${MNC}
 # =============================================================================
 
 # Default authentication keys for subscriber provisioning
+# Ki and OPc are saved after confirmation. Source OP is never saved.
 OPEN5GS_DEFAULT_K=${OPEN5GS_DEFAULT_K}
 OPEN5GS_DEFAULT_OPC=${OPEN5GS_DEFAULT_OPC}
 
@@ -531,6 +641,7 @@ DOCKER_GID=${DOCKER_GID}
 # MongoDB URI (used by backend and HSS/UDR)
 MONGODB_URI=mongodb://mongodb:27017/open5gs
 EOF
+)
 
 echo -e "Configuration file generated: ${GREEN}.env${NC}"
 
@@ -806,7 +917,7 @@ fi
 echo -e "========================================${NC}"
 echo ""
 echo "Configuration Summary:"
-echo "  Mode:         ${NETWORK_MODE^^}"
+echo "  Mode:         $(printf '%s' "$NETWORK_MODE" | tr '[:lower:]' '[:upper:]')"
 echo "  Host IP:      $DOCKER_HOST_IP"
 echo "  UE Pool:      $UE_POOL_SUBNET"
 echo "  PLMN:         ${MCC}-${MNC}"
@@ -821,7 +932,7 @@ if [ "$SETUP_MODE" = "network" ]; then
     echo "  docker compose -f $COMPOSE_FILE down"
     echo "  ./scripts/pull-and-run.sh"
 else
-    echo "  SIM Keys:     Configured"
+    echo "  SIM Keys:     Ki and OPc configured; source OP not saved"
     if [ "$NETWORK_MODE" = "5g" ]; then
         echo "  gNodeBs:      ${#GNODEB_ENTRIES[@]} configured"
     else
