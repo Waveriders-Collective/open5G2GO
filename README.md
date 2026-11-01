@@ -28,11 +28,31 @@ curl -fsSL https://raw.githubusercontent.com/Waveriders-Collective/open5G2GO/mai
 ```
 
 This will:
-1. Check system prerequisites
+1. Check required tools and offer to install missing packages with your approval
 2. Clone the repository
 3. Run interactive setup wizard
 4. Pull pre-built Docker images
 5. Start the stack
+
+On Ubuntu and Debian, the installer lists missing packages and asks before running
+`apt-get update` and installing them with `sudo` (or directly when run as root).
+It checks Git, curl, OpenSSL, Docker, Docker Compose, and the Linux networking
+tools used during setup. Missing Docker components are installed using Docker's
+official [Ubuntu](https://docs.docker.com/engine/install/ubuntu/#install-using-the-apt-repository)
+or [Debian](https://docs.docker.com/engine/install/debian/#install-using-the-apt-repository)
+apt-repository instructions, including the signing key when needed. Existing
+packages are not removed, and a full system upgrade is not run.
+Run the command from an interactive terminal; declining the prompt stops before
+the repository is cloned or an existing installation is changed.
+
+If the local Docker service is stopped, the installer asks whether to start it
+with `sudo systemctl start docker` or exit. After approval it starts Docker and
+checks that it is accessible before continuing. A running daemon with a permission
+error is reported separately, with instructions to configure access and log in
+again. Remote and rootless Docker contexts require their own daemon setup; the
+installer only offers to start the local systemd service. On other Linux
+distributions, install missing dependencies using your distribution's package
+manager.
 
 ### Manual Install
 
