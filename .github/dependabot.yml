@@ -1,24 +1,68 @@
 version: 2
+
+# One weekly version-update PR across the application and build tooling.
+multi-ecosystem-groups:
+  dependencies:
+    schedule:
+      interval: weekly
+
 updates:
   - package-ecosystem: github-actions
     directory: /
-    schedule:
-      interval: weekly
-    open-pull-requests-limit: 5
+    patterns: ["*"]
+    multi-ecosystem-group: dependencies
+    groups:
+      security-updates:
+        applies-to: security-updates
+        patterns: ["*"]
   - package-ecosystem: npm
     directory: /web_frontend
-    schedule:
-      interval: weekly
-    open-pull-requests-limit: 5
+    patterns: ["*"]
+    multi-ecosystem-group: dependencies
+    groups:
+      security-updates:
+        applies-to: security-updates
+        patterns: ["*"]
+    # These migrations failed review/CI; remove each hold with its compatibility fix.
+    ignore:
+      # TypeScript 7 removes baseUrl and changes APIs used by typescript-eslint 6.
+      - dependency-name: typescript
+        versions: [">=7.0.0"]
+      # Plugin React 6 requires Vite 8; the application currently builds with Vite 6.
+      - dependency-name: "@vitejs/plugin-react"
+        versions: [">=6.0.0"]
+      # Upgrade React and its types together after resolving the JSX type errors.
+      - dependency-name: react
+        versions: [">=19.0.0"]
+      - dependency-name: react-dom
+        versions: [">=19.0.0"]
+      - dependency-name: "@types/react"
+        versions: [">=19.0.0"]
+      - dependency-name: "@types/react-dom"
+        versions: [">=19.0.0"]
+      # Hooks 7 reports state updates in effects in six existing components.
+      - dependency-name: eslint-plugin-react-hooks
+        versions: [">=7.0.0"]
   - package-ecosystem: pip
     directory: /
-    schedule:
-      interval: weekly
-    open-pull-requests-limit: 5
+    patterns: ["*"]
+    multi-ecosystem-group: dependencies
+    groups:
+      security-updates:
+        applies-to: security-updates
+        patterns: ["*"]
   - package-ecosystem: docker
     directories:
       - /
       - /open5gs
-    schedule:
-      interval: weekly
-    open-pull-requests-limit: 5
+    patterns: ["*"]
+    multi-ecosystem-group: dependencies
+    groups:
+      security-updates:
+        applies-to: security-updates
+        patterns: ["*"]
+    ignore:
+      # Open5GS still installs MongoDB 6.0 packages from the Ubuntu Jammy repository.
+      # Migrate that dependency and validate the core image before changing its OS.
+      - dependency-name: ubuntu
+        versions: [">=24.0"]

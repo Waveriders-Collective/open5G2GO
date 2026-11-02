@@ -200,8 +200,8 @@ Need SIMs? Order pre-programmed SIMs at: https://waveriders.live/sims
 ## Development
 
 ### Prerequisites
-- Python 3.12+ recommended (minimum 3.11)
-- Node.js 24
+- Python 3.15 recommended (minimum 3.11; CI also covers 3.12)
+- Node.js 26
 - Docker & Docker Compose
 
 ### Local Development
