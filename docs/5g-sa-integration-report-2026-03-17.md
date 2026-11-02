@@ -6,7 +6,10 @@
 **Core Version**: Open5GS 2.7.6
 **Docker Image**: `ghcr.io/waveriders-collective/open5g2go-open5gs:feature-5g-sa-core-support`
 
-> **Status update (2 Nov 2026):** Both blockers recorded below, downlink data delivery and Seneca SIM authentication, have since been resolved. How each was fixed is still to be written up here. The rest of this report is a record of the March 2026 session.
+> **Status update (2 Nov 2026):** Both blockers recorded below have since been resolved. The rest of this report is a record of the March 2026 session.
+>
+> - **Downlink data delivery** was fixed in the Askey gNB's own settings, not in the core. In the working configuration, the gNB's N3 (user-plane) interface has its own IP address, separate from the N2/management address. The symptom here, where uplink works but downlink never reaches the UE, is the one described under [N2/N3 Interface Configuration](docs/gnodeb-setup.md#n2n3-interface-configuration) in the gNodeB setup guide.
+> - **Seneca SIM authentication** has also been resolved; what fixed it is still to be written up.
 
 ---
 
@@ -426,7 +429,7 @@ Multiple `sed` edits to the compose file during testing caused structural corrup
 ## 13. Open Action Items
 
 ### Blocking
-1. **Downlink data delivery** — *Resolved after this session.* At the time: root cause unknown. Need to investigate after gNB reboot. Possible causes: GTP-U TEID mismatch in initial session (stale from pre-host-mode config), MTU issue, Askey firmware bug, or DRB setup failure.
+1. **Downlink data delivery** — *Resolved after this session by giving the gNB a separate N3 IP (see the update at the top).* At the time: root cause unknown. Need to investigate after gNB reboot. Possible causes: GTP-U TEID mismatch in initial session (stale from pre-host-mode config), MTU issue, Askey firmware bug, or DRB setup failure.
 2. **Seneca SIM auth** — *Resolved after this session.* At the time: contact supplier to verify: (a) Are CSV values OP or OPc? (b) What AMF (auth management field) value do the SIMs use? (c) Are the Ki values correct for these specific ICCIDs?
 
 ### Codebase Changes Needed
