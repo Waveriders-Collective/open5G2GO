@@ -25,7 +25,7 @@ check_docker() {
     else
         echo -e "${RED}FAILED${NC}"
         echo "  -> Install Docker: https://docs.docker.com/get-docker/"
-        ((ERRORS++))
+        ERRORS=$((ERRORS + 1))
     fi
 }
 
@@ -38,7 +38,7 @@ check_compose() {
     else
         echo -e "${RED}FAILED${NC}"
         echo "  -> Docker Compose v2 required"
-        ((ERRORS++))
+        ERRORS=$((ERRORS + 1))
     fi
 }
 
@@ -77,7 +77,7 @@ check_ports() {
     else
         echo -e "${RED}FAILED${NC}"
         echo "  -> Ports in use:$PORTS_IN_USE"
-        ((ERRORS++))
+        ERRORS=$((ERRORS + 1))
     fi
 }
 
@@ -90,7 +90,7 @@ check_disk() {
     else
         echo -e "${RED}FAILED${NC}"
         echo "  -> Need at least 5GB, have ${AVAILABLE}GB"
-        ((ERRORS++))
+        ERRORS=$((ERRORS + 1))
     fi
 }
 
