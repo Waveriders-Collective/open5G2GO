@@ -23,7 +23,7 @@ pymongo = "^4.6.0"
 dnspython = ">=2.9.0,<3.0.0"
 pyyaml = "^6.0.1"
 python-multipart = ">=0.0.32,<0.1.0"
-httpx = "^0.27.0"
+httpx = ">=0.27,<0.29"
 pysnmp = "^6.0.0"  # For Baicells eNodeB SNMP monitoring
 
 [tool.poetry.group.dev.dependencies]
