@@ -33,7 +33,7 @@ pytest-cov = "^4.1.0"
 cryptography = "^50.0.2"  # Exercise SIM key generation tests instead of skipping them
 black = "^26.10.1"
 ruff = "^0.1.6"
-mypy = "^1.7.0"
+mypy = ">=1.7,<3.0"
 
 [build-system]
 requires = ["poetry-core==2.5.0"]
