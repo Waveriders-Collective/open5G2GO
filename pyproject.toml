@@ -29,7 +29,7 @@ pysnmp = "^6.0.0"  # For Baicells eNodeB SNMP monitoring
 [tool.poetry.group.dev.dependencies]
 pytest = "^9.0.3"
 pytest-asyncio = "^1.4.1"
-pytest-cov = "^4.1.0"
+pytest-cov = ">=4.1,<8.0"
 cryptography = "^50.0.2"  # Exercise SIM key generation tests instead of skipping them
 black = "^26.10.1"
 ruff = "^0.1.6"
