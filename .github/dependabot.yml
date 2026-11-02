@@ -25,10 +25,10 @@ updates:
         patterns: ["*"]
     # These migrations failed review/CI; remove each hold with its compatibility fix.
     ignore:
-      # TypeScript 7 removes baseUrl and changes APIs used by typescript-eslint 6.
+      # TypeScript 7 is outside the supported range of typescript-eslint 8.
       - dependency-name: typescript
         versions: [">=7.0.0"]
-      # Plugin React 6 requires Vite 8; the application currently builds with Vite 6.
+      # Keep the tested React plugin until its next major is reviewed with Vite 8.
       - dependency-name: "@vitejs/plugin-react"
         versions: [">=6.0.0"]
       # Upgrade React and its types together after resolving the JSX type errors.
@@ -43,6 +43,14 @@ updates:
       # Hooks 7 reports state updates in effects in six existing components.
       - dependency-name: eslint-plugin-react-hooks
         versions: [">=7.0.0"]
+      # Hooks 6 supports ESLint through 9; upgrade these packages together.
+      - dependency-name: eslint
+        versions: [">=10.0.0"]
+      - dependency-name: "@eslint/js"
+        versions: [">=10.0.0"]
+      # Tailwind 4 needs a coordinated PostCSS, theme, and CSS/browser migration.
+      - dependency-name: tailwindcss
+        versions: [">=4.0.0"]
   - package-ecosystem: pip
     directory: /
     patterns: ["*"]
@@ -65,4 +73,4 @@ updates:
       # Open5GS still installs MongoDB 6.0 packages from the Ubuntu Jammy repository.
       # Migrate that dependency and validate the core image before changing its OS.
       - dependency-name: ubuntu
-        versions: [">=24.0"]
+        versions: [">22.04"]

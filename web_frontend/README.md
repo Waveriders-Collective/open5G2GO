@@ -259,7 +259,7 @@ interface ListSubscribersResponse {
 
 ### Prerequisites
 
-- Node.js 18+ and npm
+- Node.js 20.19+ (20.x) or 22.12+ and npm; CI uses Node.js 26
 - Backend API running at `http://localhost:8080`
 
 ### Install Dependencies
