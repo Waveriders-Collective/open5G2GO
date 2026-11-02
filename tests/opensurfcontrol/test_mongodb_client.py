@@ -7,19 +7,20 @@ Unit tests for opensurfcontrol.mongodb_client module.
 Tests the Open5GS MongoDB adapter for subscriber management.
 """
 
-import pytest
-from unittest.mock import Mock, MagicMock, patch
+from unittest.mock import MagicMock, Mock, patch
 
-from opensurfcontrol.mongodb_client import (
-    Open5GSClient,
-    get_client,
-    MongoDBConnectionError,
-    ValidationError,
-    _validate_imsi,
-    _validate_hex_key,
-)
+import pytest
+
 from opensurfcontrol.constants import (
     IMSI_PREFIX,
+)
+from opensurfcontrol.mongodb_client import (
+    MongoDBConnectionError,
+    Open5GSClient,
+    ValidationError,
+    _validate_hex_key,
+    _validate_imsi,
+    get_client,
 )
 
 # Public 3GPP Milenage test set 1; independent of local subscriber credentials.
@@ -85,17 +86,25 @@ class TestOpen5GSClient:
     """Tests for Open5GSClient class."""
 
     @patch('opensurfcontrol.mongodb_client.MongoClient')
-    def test_connect_success(self, mock_mongo_client):
-        """Test successful MongoDB connection."""
+    def test_connect_success(self, mock_mongo_client, caplog):
+        """Connect with credentials without copying them into logs."""
         mock_client = MagicMock()
         mock_client.admin.command.return_value = {'ok': 1}
         mock_mongo_client.return_value = mock_client
 
-        client = Open5GSClient(uri="mongodb://localhost:27017")
-        client.connect()
+        username = "database-log-test-user"
+        password = "database-log-test-password"
+        uri = f"mongodb://{username}:{password}@localhost:27017"
+        client = Open5GSClient(uri=uri)
+        with caplog.at_level("INFO", logger="opensurfcontrol.mongodb_client"):
+            client.connect()
 
-        mock_mongo_client.assert_called_once()
+        mock_mongo_client.assert_called_once_with(uri, serverSelectionTimeoutMS=5000)
         mock_client.admin.command.assert_called_once_with('ping')
+        assert "Connected to MongoDB" in caplog.text
+        assert username not in caplog.text
+        assert password not in caplog.text
+        assert uri not in caplog.text
 
     @patch('opensurfcontrol.mongodb_client.MongoClient')
     def test_connect_failure(self, mock_mongo_client):

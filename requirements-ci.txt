@@ -1,6 +1,4 @@
-# Test and lint tools for CI; install application dependencies with `pip install .`.
-# Keep these versions within the development constraints in pyproject.toml.
-pytest==7.4.4
-pytest-asyncio==0.21.2
-cryptography==50.0.2
-ruff==0.1.15
+# CI tooling only. Application and development dependencies are frozen in poetry.lock.
+poetry==2.5.1
+poetry-plugin-export==1.10.1
+pip-audit==2.10.1

@@ -200,8 +200,8 @@ Need SIMs? Order pre-programmed SIMs at: https://waveriders.live/sims
 ## Development
 
 ### Prerequisites
-- Python 3.10+
-- Node.js 18+
+- Python 3.12+ recommended (minimum 3.11)
+- Node.js 24
 - Docker & Docker Compose
 
 ### Local Development
@@ -223,9 +223,16 @@ cd web_frontend && npm run dev
 ### Testing
 
 The [CI workflow](.github/workflows/ci.yml) checks every pull request and push to
-`main`: Python lint and tests on Python 3.10/3.12, Bash syntax and ShellCheck,
+`main`: Python lint and tests on Python 3.11/3.12, Bash syntax and ShellCheck,
 Compose configuration validation, and frontend lint and production build.
 See [local CI commands](CONTRIBUTING.md#running-ci-checks-locally) to reproduce the checks.
+
+[CodeQL](.github/workflows/codeql.yml) scans Python, JavaScript/TypeScript, and
+GitHub Actions. [Dependency audits](.github/workflows/dependencies.yml) run on
+pull requests, pushes to `main`, and weekly; Dependabot proposes updates after
+its configuration is merged. Operational Ki/OPc
+retrieval for SIM programming remains supported; deployment access controls are
+the operator's choice.
 
 ```bash
 # Run Python tests

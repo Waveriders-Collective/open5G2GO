@@ -28,6 +28,7 @@ build/
 # Environment
 .env
 .env.local
+.env.backup
 
 # OS
 .DS_Store
@@ -42,10 +43,12 @@ htmlcov/
 *.log
 
 # Credentials
+subscribers_backup*.json
 config/sas-service-account.json
 
 # Local docs
 docs/LESSONS_LEARNED.md
+docs/security-review*.md
 
 # Plans
 plans/

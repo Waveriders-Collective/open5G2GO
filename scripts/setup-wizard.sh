@@ -107,9 +107,9 @@ prompt_with_default() {
     local var_name="$3"
     local value
 
-    read -p "$prompt [$default]: " value
+    read -r -p "$prompt [$default]: " value
     value="${value:-$default}"
-    eval "$var_name='$value'"
+    printf -v "$var_name" '%s' "$value"
 }
 
 # Validate hex string (32 chars for K/OPc keys)

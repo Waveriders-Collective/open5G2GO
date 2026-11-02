@@ -64,6 +64,37 @@ printf '%s\n' "$MOCK_GENERATOR_PAYLOAD" >&3
 """
 
 
+class TestPromptWithDefault(unittest.TestCase):
+    def test_prompt_values_are_assigned_without_shell_evaluation(self):
+        source = WIZARD.read_text()
+        helper = source.split("prompt_with_default() {", 1)[1].split("\n}", 1)[0]
+        script = (
+            "set -e\nprompt_with_default() {"
+            + helper
+            + "\n}\nprompt_with_default 'Network setting' 'default' result\n"
+            + "printf '%s' \"$result\"\n"
+        )
+        values = [
+            "192.0.2.10'$(printf executed >&2)'",
+            "192.0.2.10'; printf executed >&2; #'",
+            r"literal\backslash",
+            "",
+        ]
+        for value in values:
+            with self.subTest(value=value):
+                result = subprocess.run(
+                    ["/bin/bash", "-c", script],
+                    input=value + "\n",
+                    text=True,
+                    capture_output=True,
+                    check=False,
+                    timeout=5,
+                )
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertEqual(result.stderr, "")
+                self.assertEqual(result.stdout, value or "default")
+
+
 class TestSetupWizardSimKeys(unittest.TestCase):
     def setUp(self):
         temporary = tempfile.TemporaryDirectory(prefix="open5g2go-wizard-test-")
