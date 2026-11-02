@@ -6,6 +6,8 @@
 **Core Version**: Open5GS 2.7.6
 **Docker Image**: `ghcr.io/waveriders-collective/open5g2go-open5gs:feature-5g-sa-core-support`
 
+> **Status update (2 Nov 2026):** Both blockers recorded below, downlink data delivery and Seneca SIM authentication, have since been resolved. How each was fixed is still to be written up here. The rest of this report is a record of the March 2026 session.
+
 ---
 
 ## Test Environment
@@ -13,8 +15,8 @@
 | Component | Details |
 |-----------|---------|
 | Core Host | Proxmox VM 100 ("wavedock"), Debian 13 Trixie, 12GB RAM, 50GB disk |
-| Proxmox Host | `root@192.168.8.10` (ssh -i ~/.ssh/github_waverider) |
-| Core VM | `waveriders@192.168.8.5` (ssh -i ~/.ssh/github_waverider) |
+| Proxmox Host | Lab hypervisor, administered over SSH |
+| Core VM | 192.168.8.5, administered over SSH |
 | gNB | Askey, management IP 192.168.8.50 |
 | PLMN | 999-70 (MCC: 999, MNC: 70, 2-digit) |
 | SIM Cards | Sysmocom sysmoISIM-SJA5 (programmed via SurfSIM/grsimwrite), Seneca pre-programmed SIMs |
@@ -54,7 +56,7 @@ Added 4 subscribers from `seneca-sims-08082025.csv`:
 | 999700000009482 | <YOUR_SIM_KI> | <YOUR_SIM_OPC> | 447369029371 |
 | 999700000009483 | <YOUR_SIM_KI> | <YOUR_SIM_OPC> | 447369029372 |
 
-**STATUS: AUTH FAILING** — All 4 Seneca SIMs get MAC failure during 5G-AKA authentication. SUCI decryption works (key ID 30 resolved correctly, IMSI visible in UDM debug logs), but the Ki/OPc values from the CSV produce incorrect auth vectors. We tried both `op_type: 2` (OPc) and `op_type: 0` (OP) — neither works. The `amf` (Authentication Management Field) is set to `8000` but the supplier may use a different value. **Needs verification with Seneca.**
+**STATUS: RESOLVED since this session (see the update at the top).** At the time of testing: all 4 Seneca SIMs get MAC failure during 5G-AKA authentication. SUCI decryption works (key ID 30 resolved correctly, IMSI visible in UDM debug logs), but the Ki/OPc values from the CSV produce incorrect auth vectors. We tried both `op_type: 2` (OPc) and `op_type: 0` (OP) — neither works. The `amf` (Authentication Management Field) is set to `8000` but the supplier may use a different value. **Needs verification with Seneca.**
 
 ### SurfSIM-Programmed SIM
 - IMSI: 999700308170001
@@ -272,7 +274,7 @@ pem = key.private_bytes(Encoding.PEM, PrivateFormat.TraditionalOpenSSL, NoEncryp
 - File: `open5gs/config/hnet_key1.pem`
 
 **Key 2** (Seneca supplier key):
-- File: `open5gs/config/hnet_key2.pem` (copied from `~/Downloads/private_key_a_30.pem`)
+- File: `open5gs/config/hnet_key2.pem` (private key file supplied by the SIM vendor)
 
 ---
 
@@ -368,7 +370,7 @@ iface ens18 inet static
 ### Proxmox Guest Agent Access
 When the VM is unreachable via SSH, Proxmox guest agent (`qm guest exec`) can still execute commands:
 ```bash
-ssh root@192.168.8.10 'qm guest exec 100 -- bash -c "command here"'
+ssh <user>@<proxmox-host> 'qm guest exec <vmid> -- bash -c "command here"'
 ```
 This was essential for debugging network issues and setting static IP when SSH was down.
 
@@ -412,10 +414,10 @@ Multiple `sed` edits to the compose file during testing caused structural corrup
 | gNB NG Setup | WORKING | Host-mode AMF, SCTP direct |
 | SUCI Decryption | WORKING | HNET keys configured (id:30 X25519, id:1 X25519) |
 | SurfSIM-programmed SIM auth | WORKING | 5G-AKA success, registration complete |
-| Seneca SIM auth | FAILING | MAC failure — Ki/OPc or AMF value mismatch, needs supplier clarification |
+| Seneca SIM auth | FAILING (since resolved) | MAC failure — Ki/OPc or AMF value mismatch, needs supplier clarification |
 | PDU Session (internet) | WORKING | 10.48.99.0/24 pool, DNN "internet" |
 | Uplink data | WORKING | DNS resolves, TCP SYN exits, ICMP works on ogstun |
-| Downlink data | NOT WORKING | Packets reach gNB via GTP-U but not delivered to UE. gNB crashed during investigation |
+| Downlink data | NOT WORKING (since resolved) | Packets reach gNB via GTP-U but not delivered to UE. gNB crashed during investigation |
 | SurfControl UI | WORKING | Shows gNB and UE status |
 | Static IP | WORKING | /etc/network/interfaces, dhcpcd disabled |
 
@@ -424,8 +426,8 @@ Multiple `sed` edits to the compose file during testing caused structural corrup
 ## 13. Open Action Items
 
 ### Blocking
-1. **Downlink data delivery** — Root cause unknown. Need to investigate after gNB reboot. Possible causes: GTP-U TEID mismatch in initial session (stale from pre-host-mode config), MTU issue, Askey firmware bug, or DRB setup failure.
-2. **Seneca SIM auth** — Contact supplier to verify: (a) Are CSV values OP or OPc? (b) What AMF (auth management field) value do the SIMs use? (c) Are the Ki values correct for these specific ICCIDs?
+1. **Downlink data delivery** — *Resolved after this session.* At the time: root cause unknown. Need to investigate after gNB reboot. Possible causes: GTP-U TEID mismatch in initial session (stale from pre-host-mode config), MTU issue, Askey firmware bug, or DRB setup failure.
+2. **Seneca SIM auth** — *Resolved after this session.* At the time: contact supplier to verify: (a) Are CSV values OP or OPc? (b) What AMF (auth management field) value do the SIMs use? (c) Are the Ki values correct for these specific ICCIDs?
 
 ### Codebase Changes Needed
 3. **AMF host mode in docker-compose** — Implement cleanly in repo (not sed hacks on host)

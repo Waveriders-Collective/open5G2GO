@@ -29,6 +29,7 @@ build/
 .env
 .env.local
 .env.backup
+.env.backup.*
 
 # OS
 .DS_Store
@@ -45,6 +46,15 @@ htmlcov/
 # Credentials
 subscribers_backup*.json
 config/sas-service-account.json
+
+# Per-deployment keys written by setup-wizard.sh (SUCI home network keys,
+# freeDiameter CA and TLS keys); never commit these
+open5gs/hnet/*
+!open5gs/hnet/.gitkeep
+open5gs/hnet.backup*/
+open5gs/config/freeDiameter/*.pem
+open5gs/config/freeDiameter/*.srl
+open5gs/config/*.pem
 
 # Local docs
 docs/LESSONS_LEARNED.md

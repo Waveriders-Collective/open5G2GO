@@ -203,23 +203,27 @@ docker volume inspect open5g2go_mongodb_data
 !!! warning "Always Back Up Before Destructive Operations"
     Always back up the subscriber database before running `docker compose down -v` or any operation that removes Docker volumes. Subscriber records (IMSIs, authentication keys, session data) cannot be recovered from config files alone.
 
-Before major changes, back up your data:
+Before major changes, back up your data. Keep backups **outside the repository folder**: `.env`, the HNET keys and the subscriber export all contain SIM or network keys, and a copy inside the repo can be committed by accident.
 
 ```bash
-# Backup .env
-cp .env .env.backup.$(date +%Y%m%d)
+# One dated folder per backup, readable only by you
+BACKUP_DIR=~/open5g2go-backups/$(date +%Y%m%d)
+mkdir -p "$BACKUP_DIR" && chmod 700 ~/open5g2go-backups
+
+# Backup .env (contains your SIM Ki/OPc)
+cp .env "$BACKUP_DIR/env"
 
 # Backup base station configs
-cp config/enodebs.yaml config/enodebs.yaml.backup.$(date +%Y%m%d)
-cp config/gnodebs.yaml config/gnodebs.yaml.backup.$(date +%Y%m%d) 2>/dev/null
+cp config/enodebs.yaml "$BACKUP_DIR/"
+cp config/gnodebs.yaml "$BACKUP_DIR/" 2>/dev/null
 
 # Backup HNET keys (5G mode)
-cp -r open5gs/hnet/ open5gs/hnet.backup.$(date +%Y%m%d) 2>/dev/null
+cp -r open5gs/hnet "$BACKUP_DIR/hnet" 2>/dev/null
 
 # Backup MongoDB subscribers (while running)
 docker exec open5g2go-mongodb mongo open5gs --quiet \
   --eval 'JSON.stringify(db.subscribers.find().toArray(), null, 2)' \
-  > subscribers_backup_$(date +%Y%m%d).json
+  > "$BACKUP_DIR/subscribers.json"
 ```
 
 ### Restoring MongoDB Data
