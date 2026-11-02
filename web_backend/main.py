@@ -10,9 +10,11 @@ providing browser-based access to the openSurfControl functionality.
 
 import logging
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from .config import settings
 from .api.routes import router
@@ -81,6 +83,44 @@ async def root():
         "docs": f"{settings.api_prefix}/docs",
         "health": f"{settings.api_prefix}/health"
     })
+
+
+# HTTP error handler
+@app.exception_handler(StarletteHTTPException)
+async def http_exception_handler(request: Request, exc: StarletteHTTPException):
+    """
+    Return HTTP errors with "error" at the top level of the body.
+
+    Routes raise HTTPException with the service result as the detail, and the
+    web UI reads response.data.error, so a dict detail becomes the body itself.
+    """
+    if isinstance(exc.detail, dict):
+        content = exc.detail
+    else:
+        content = {"error": str(exc.detail)}
+    return JSONResponse(status_code=exc.status_code, content=content, headers=exc.headers)
+
+
+# Request validation error handler
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    """
+    Return request validation failures as one readable "error" message.
+
+    The submitted values are not echoed back.
+    """
+    messages = []
+    for err in exc.errors():
+        field = ".".join(str(part) for part in err.get("loc", ()) if part != "body")
+        if err.get("type") == "string_pattern_mismatch":
+            msg = "invalid format"
+        else:
+            msg = err.get("msg", "is invalid")
+        messages.append(f"{field}: {msg}" if field else msg)
+    return JSONResponse(
+        status_code=422,
+        content={"error": "; ".join(messages) or "Invalid request"}
+    )
 
 
 # Global exception handler

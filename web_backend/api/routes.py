@@ -78,10 +78,10 @@ async def list_subscribers(
       "total": 10,
       "subscribers": [
         {
-          "imsi": "315010000000001",
+          "imsi": "315010000000011",
           "name": "CAM-01",
           "apn": "internet",
-          "ip": "10.48.99.2"
+          "ip": "10.48.99.11"
         }
       ]
     }

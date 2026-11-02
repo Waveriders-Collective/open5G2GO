@@ -78,11 +78,11 @@ sleep 5
 MAX_ATTEMPTS=20
 ATTEMPT=0
 while [ $ATTEMPT -lt $MAX_ATTEMPTS ]; do
-    if curl -sf http://localhost:8000/api/v1/health > /dev/null 2>&1; then
+    if curl -sf http://localhost:8080/api/v1/health > /dev/null 2>&1; then
         echo -e "  Backend healthy: ${GREEN}OK${NC}"
         break
     fi
-    ((ATTEMPT++))
+    ATTEMPT=$((ATTEMPT + 1))
     sleep 2
 done
 

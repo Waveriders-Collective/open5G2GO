@@ -107,7 +107,7 @@ while [ $ATTEMPT -lt $MAX_ATTEMPTS ]; do
     if curl -sf http://localhost:8080/api/v1/health > /dev/null 2>&1; then
         break
     fi
-    ((ATTEMPT++))
+    ATTEMPT=$((ATTEMPT + 1))
     echo "  Waiting for backend... ($ATTEMPT/$MAX_ATTEMPTS)"
     sleep 3
 done
