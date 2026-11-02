@@ -87,8 +87,10 @@ poetry run ruff check .
 ## Running CI Checks Locally
 
 GitHub Actions runs checks on pull requests and pushes to `main`. The Python
-matrix uses 3.11 and 3.12 on Ubuntu; frontend checks use Node.js 24. The existing
-Docker publishing workflow runs separately after pushes to `main`.
+matrix uses 3.11, 3.12, and 3.15 on Ubuntu; frontend checks use Node.js 26. Container
+CI exercises the same Buildx, metadata, and build Actions as publishing, with
+registry pushes disabled. The Docker publishing workflow runs separately after
+pushes to `main`.
 
 Use an isolated Python environment to match CI's test and lint tools:
 
@@ -154,6 +156,28 @@ repository variable `DEPENDENCY_REVIEW_ENABLED=true`; the full audits always run
 CodeQL runs the extended security queries and uploads results to code scanning;
 a successful scan means analysis completed, not that no alerts exist. Merge
 enforcement depends on repository rules configured by a maintainer.
+
+## Dependency Updates
+
+Dependabot groups version updates for Python, npm, Docker, and GitHub Actions
+into one weekly pull request using the `dependencies` multi-ecosystem group in
+[`.github/dependabot.yml`](.github/dependabot.yml). Major updates participate too;
+grouping does not imply automatic approval or merging. Validate the combined
+lockfiles, application checks, package audits, and affected containers before merge.
+
+GitHub handles security updates separately from scheduled version updates and
+cannot group them across ecosystems. The configuration groups security fixes
+within each ecosystem so they can arrive without waiting for the weekly batch.
+See [GitHub's security-update grouping limits](https://docs.github.com/en/code-security/concepts/supply-chain-security/dependabot-security-updates).
+
+Explicit version holds document upgrades that need compatibility work, including
+the frontend toolchain/React migrations and the Open5GS base-OS migration. A hold
+can also exclude a security fix in that version range: continue reviewing alerts
+and audits, and remove the hold as part of the tested migration. Keep working
+updates together; document any deferred update and its failing check rather than
+merging it solely because other dependencies pass.
+The [November 2026 consolidation review](docs/dependency-review-2026-11-01.md)
+records the current holds, compatibility fixes, and validation limits.
 
 ## Pull Request Process
 

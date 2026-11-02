@@ -236,9 +236,9 @@ class BaicellsSNMPClient:
         """Check if pysnmp is available."""
         try:
             # Verify that the optional installation exposes every required symbol.
-            from pysnmp.hlapi.asyncio import (  # noqa: F401
-                getCmd, CommunityData, UdpTransportTarget,
-                ContextData, ObjectType, ObjectIdentity
+            from pysnmp.hlapi.v3arch.asyncio import (  # noqa: F401
+                get_cmd, CommunityData, UdpTransportTarget,
+                ContextData, ObjectType, ObjectIdentity, SnmpEngine
             )
             return True
         except ImportError:
@@ -268,10 +268,11 @@ class BaicellsSNMPClient:
             status.error = "pysnmp not installed"
             return status
 
+        engine = None
         try:
             # Import pysnmp components
-            from pysnmp.hlapi.asyncio import (
-                getCmd, CommunityData, UdpTransportTarget,
+            from pysnmp.hlapi.v3arch.asyncio import (
+                get_cmd, CommunityData, UdpTransportTarget,
                 ContextData, ObjectType, ObjectIdentity, SnmpEngine
             )
 
@@ -281,15 +282,17 @@ class BaicellsSNMPClient:
                 for oid in OIDS.values()
             ]
 
-            # Execute SNMP GET (pysnmp 6.x requires SnmpEngine as first arg)
-            errorIndication, errorStatus, errorIndex, varBinds = await getCmd(
-                SnmpEngine(),
+            # PySNMP 7 resolves the transport asynchronously before issuing the query.
+            transport = await UdpTransportTarget.create(
+                (ip_address, 161),
+                timeout=self.timeout,
+                retries=self.retries,
+            )
+            engine = SnmpEngine()
+            errorIndication, errorStatus, errorIndex, varBinds = await get_cmd(
+                engine,
                 CommunityData(self.community),
-                UdpTransportTarget(
-                    (ip_address, 161),
-                    timeout=self.timeout,
-                    retries=self.retries,
-                ),
+                transport,
                 ContextData(),
                 *oid_list
             )
@@ -321,6 +324,9 @@ class BaicellsSNMPClient:
             status.error = str(e)
             logger.error(f"SNMP error for {ip_address}: {e}")
             return status
+        finally:
+            if engine is not None:
+                engine.close_dispatcher()
 
     def _parse_results(self, status: EnodebSNMPStatus, results: Dict[str, Any]) -> None:
         """Parse SNMP results into status object."""

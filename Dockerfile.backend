@@ -1,7 +1,7 @@
 # Open5G2GO Backend Dockerfile
 # FastAPI REST API for Open5GS subscriber management
 
-FROM python:3.12-slim@sha256:aa943ce411423c7582288f18707ff66eddcbaeb510502d747a72aeb34f30d159 AS dependencies
+FROM python:3.15-slim@sha256:94d3426f1def7db4a106a232ac121bfd975393e5dfd40a619b955fae45fe7913 AS dependencies
 
 WORKDIR /app
 
@@ -13,7 +13,7 @@ RUN python -m venv /opt/poetry && \
 COPY pyproject.toml poetry.lock ./
 RUN /opt/poetry/bin/poetry install --only main --no-root --no-ansi
 
-FROM python:3.12-slim@sha256:aa943ce411423c7582288f18707ff66eddcbaeb510502d747a72aeb34f30d159 AS runtime
+FROM python:3.15-slim@sha256:94d3426f1def7db4a106a232ac121bfd975393e5dfd40a619b955fae45fe7913 AS runtime
 
 LABEL maintainer="Waveriders Collective <info@waveriders.io>"
 LABEL description="Open5G2GO API backend for private 4G network management"
