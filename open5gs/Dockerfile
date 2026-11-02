@@ -1,7 +1,7 @@
 # Open5GS 4G EPC + 5G SA Core Dockerfile
 # Provides all 4G EPC and 5G SA core network functions
 
-FROM ubuntu:22.04@sha256:076e7bf82319619f28dd0aa9c02ab34b055ad37100395b4f49a2ffba04fb5e11
+FROM ubuntu:23.10@sha256:fd7fe639db24c4e005643921beea92bc449aac4f4d40d60cd9ad9ab6456aec01
 
 LABEL maintainer="Waveriders Collective <info@waveriders.io>"
 LABEL description="Open5GS 4G EPC + 5G SA Core for Open5G2GO private network deployment"
