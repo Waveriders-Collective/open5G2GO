@@ -14,19 +14,17 @@ from opensurfcontrol.mongodb_client import (
     Open5GSClient,
     get_client,
     MongoDBConnectionError,
-    SubscriberError,
     ValidationError,
     _validate_imsi,
     _validate_hex_key,
 )
 from opensurfcontrol.constants import (
-    DEFAULT_K,
-    DEFAULT_OPC,
-    DEFAULT_APN,
-    DEFAULT_AMBR_UL,
-    DEFAULT_AMBR_DL,
     IMSI_PREFIX,
 )
+
+# Public 3GPP Milenage test set 1; independent of local subscriber credentials.
+TEST_K = "465b5ce8b199b49faa5f0a2ee238a6bc"
+TEST_OPC = "cd63cb71954a9f4e48a5994e37a02baf"
 
 
 # ============================================================================
@@ -177,6 +175,7 @@ class TestOpen5GSClient:
     def test_add_subscriber(self, mock_mongo_client):
         """Test adding a new subscriber."""
         mock_collection = Mock()
+        mock_collection.find_one.return_value = None
         mock_collection.update_one.return_value = Mock(upserted_id="123")
         mock_db = Mock()
         mock_db.subscribers = mock_collection
@@ -189,8 +188,8 @@ class TestOpen5GSClient:
         client.connect()
         subscriber = client.add_subscriber(
             imsi="315010000000001",
-            k=DEFAULT_K,
-            opc=DEFAULT_OPC,
+            k=TEST_K,
+            opc=TEST_OPC,
             apn="internet",
             ip="10.48.99.10",
             device_name="CAM-01"
@@ -200,6 +199,8 @@ class TestOpen5GSClient:
         assert subscriber["device_name"] == "CAM-01"
         mock_collection.update_one.assert_called_once()
 
+    @patch('opensurfcontrol.mongodb_client.DEFAULT_K', TEST_K)
+    @patch('opensurfcontrol.mongodb_client.DEFAULT_OPC', TEST_OPC)
     @patch('opensurfcontrol.mongodb_client.MongoClient')
     def test_add_subscriber_with_defaults(self, mock_mongo_client):
         """Test adding a subscriber with default K/OPc."""
@@ -220,8 +221,8 @@ class TestOpen5GSClient:
         )
 
         # Should use default K/OPc
-        assert subscriber["security"]["k"] == DEFAULT_K
-        assert subscriber["security"]["opc"] == DEFAULT_OPC
+        assert subscriber["security"]["k"] == TEST_K
+        assert subscriber["security"]["opc"] == TEST_OPC
 
     @patch('opensurfcontrol.mongodb_client.MongoClient')
     def test_delete_subscriber_success(self, mock_mongo_client):

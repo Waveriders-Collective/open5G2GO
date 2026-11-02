@@ -6,7 +6,7 @@ import React from 'react';
 interface Column<T> {
   key: string;
   header: string;
-  render?: (value: any, row: T) => React.ReactNode;
+  render?: (value: T[keyof T] | undefined, row: T) => React.ReactNode;
 }
 
 interface TableProps<T> {
@@ -15,7 +15,7 @@ interface TableProps<T> {
   className?: string;
 }
 
-export function Table<T extends Record<string, any>>({
+export function Table<T extends { [K in keyof T]: React.ReactNode }>({
   data,
   columns,
   className = '',
@@ -53,7 +53,9 @@ export function Table<T extends Record<string, any>>({
               >
                 {columns.map((column) => (
                   <td key={column.key} className="px-6 py-4 whitespace-nowrap text-sm font-body text-gray-dark">
-                    {column.render ? column.render(row[column.key], row) : row[column.key]}
+                    {column.render
+                      ? column.render(row[column.key as keyof T], row)
+                      : row[column.key as keyof T]}
                   </td>
                 ))}
               </tr>

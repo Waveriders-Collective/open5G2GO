@@ -222,6 +222,11 @@ cd web_frontend && npm run dev
 
 ### Testing
 
+The [CI workflow](.github/workflows/ci.yml) checks every pull request and push to
+`main`: Python lint and tests on Python 3.10/3.12, Bash syntax and ShellCheck,
+Compose configuration validation, and frontend lint and production build.
+See [local CI commands](CONTRIBUTING.md#running-ci-checks-locally) to reproduce the checks.
+
 ```bash
 # Run Python tests
 poetry run pytest

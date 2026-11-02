@@ -84,6 +84,49 @@ poetry run pytest
 poetry run ruff check .
 ```
 
+## Running CI Checks Locally
+
+GitHub Actions runs checks on pull requests and pushes to `main`. The Python
+matrix uses 3.10 and 3.12 on Ubuntu; frontend checks use Node.js 24. The existing
+Docker publishing workflow runs separately after pushes to `main`.
+
+Use an isolated Python environment to match CI's test and lint tools:
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install . -r requirements-ci.txt
+ruff check .
+python -m pytest -q
+```
+
+The SIM key tests require `cryptography`, included in the CI requirements and
+Poetry development dependencies. Installer and SIM tests use mocks and temporary
+files; they do not install packages or start Docker. The interactive SIM tests
+require a POSIX terminal, so run them on Linux or macOS. Pytest's importlib mode
+keeps the test package from shadowing the application package.
+
+From the repository root, with Bash, ShellCheck, and Docker Compose installed:
+
+```bash
+for script in install.sh scripts/*.sh; do
+  bash -n "$script"
+done
+shellcheck --severity=warning install.sh scripts/*.sh
+for config in docker-compose*.yml; do
+  docker compose --env-file env.example -f "$config" config --quiet
+done
+```
+
+Compose validation uses the example configuration and does not start containers.
+
+```bash
+cd web_frontend
+npm ci
+npm run lint
+npm run build
+```
+
 ## Pull Request Process
 
 1. Ensure all tests pass

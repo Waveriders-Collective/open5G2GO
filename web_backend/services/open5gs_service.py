@@ -11,7 +11,7 @@ by wrapping the Open5GS MongoDB client.
 import logging
 import os
 from datetime import datetime, timezone
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, Optional
 
 import yaml
 from pathlib import Path
@@ -237,7 +237,7 @@ class Open5GSService:
                 ip = self._calculate_ip(device_number)
 
             # Add subscriber
-            subscriber = self.client.add_subscriber(
+            self.client.add_subscriber(
                 imsi=imsi,
                 k=DEFAULT_K,
                 opc=DEFAULT_OPC,
