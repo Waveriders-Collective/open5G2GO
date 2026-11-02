@@ -24,6 +24,9 @@ The CLA ensures that:
    - Expected vs actual behavior
    - System information (OS, Docker version, etc.)
 
+Do not report security vulnerabilities as public issues. See [SECURITY.md](SECURITY.md)
+for how to report them privately.
+
 ### Suggesting Features
 
 1. Check existing issues and discussions for similar suggestions

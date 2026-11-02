@@ -1,0 +1,64 @@
+name: Bug report
+description: Something in open5G2GO is not working as expected
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. Please **remove SIM keys (Ki/OPc), passwords and private keys** from anything you paste below.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What did you do, what did you expect, and what happened instead?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open Devices and click Add Device
+        2. ...
+  - type: dropdown
+    id: mode
+    attributes:
+      label: Network mode
+      options:
+        - 4G (LTE)
+        - 5G SA
+        - Not sure
+    validations:
+      required: true
+  - type: input
+    id: radio
+    attributes:
+      label: Radio (eNodeB or gNodeB)
+      description: Make and model, and firmware if you know it.
+      placeholder: e.g. Baicells eNodeB, Askey gNodeB
+  - type: input
+    id: os
+    attributes:
+      label: Host operating system
+      placeholder: e.g. Ubuntu 24.04
+    validations:
+      required: true
+  - type: dropdown
+    id: install
+    attributes:
+      label: How did you install open5G2GO?
+      options:
+        - install.sh or pull-and-run.sh (prebuilt images)
+        - Built from source (docker compose build)
+        - Other
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: From `http://<host>:8080/api/v1/health`, or `git rev-parse --short HEAD` in the repo folder.
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs
+      description: For example `docker compose logs backend` or `docker compose logs mme`. Remove keys and passwords first.
+      render: shell

@@ -1,0 +1,25 @@
+name: Feature request
+description: Suggest an improvement to open5G2GO
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What are you trying to do?
+      description: The problem or use case, in your own words.
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: What would help?
+      description: How you imagine it working. Rough is fine.
+  - type: dropdown
+    id: mode
+    attributes:
+      label: Which network mode does this affect?
+      options:
+        - 4G (LTE)
+        - 5G SA
+        - Both
+        - Not sure
