@@ -100,7 +100,7 @@ Use the **search box** to filter by name, IMSI, or IP address.
 
 The system automatically:
 - Validates the 15-digit IMSI format
-- Assigns a static IP from the UE pool (based on last 4 digits of IMSI)
+- Assigns a static IP from the UE pool using the last digits of the IMSI (an IMSI ending `0011` gets `10.48.99.11`). If the last four digits fall outside 2–254, as with most vendor SIMs, enter an IP yourself. Otherwise those SIMs share `10.48.99.2` (below 2) or `10.48.99.254` (above 254), and only the first of each can be added
 - Uses the K/OPc authentication keys configured during setup
 
 ### Viewing Device Details

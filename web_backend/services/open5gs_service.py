@@ -16,7 +16,7 @@ from typing import Dict, Any, Optional
 import yaml
 from pathlib import Path
 
-from opensurfcontrol.mongodb_client import Open5GSClient, get_client
+from opensurfcontrol.mongodb_client import Open5GSClient, Open5GSClientError, get_client
 from opensurfcontrol.mme_client import get_mme_parser
 from opensurfcontrol.amf_client import get_amf_parser
 from opensurfcontrol.snmp_client import get_snmp_client
@@ -39,6 +39,19 @@ from opensurfcontrol.constants import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+def _public_error(exc: Exception) -> str:
+    """
+    Error text that is safe to return to API clients.
+
+    Open5GSClientError messages are written for users (validation failures,
+    duplicate IPs). Other exceptions can carry driver or connection details,
+    so their text stays in the backend logs.
+    """
+    if isinstance(exc, Open5GSClientError):
+        return str(exc)
+    return "Unexpected backend error; check the backend logs for details"
 
 
 def load_enodeb_config(config_path: Optional[str] = None) -> Dict[str, Any]:
@@ -162,7 +175,7 @@ class Open5GSService:
             }
         except Exception as e:
             logger.error(f"Error listing subscribers: {e}")
-            return {"error": str(e), "timestamp": self._timestamp()}
+            return {"error": _public_error(e), "timestamp": self._timestamp()}
 
     async def get_subscriber(self, imsi: str) -> Dict[str, Any]:
         """
@@ -194,7 +207,7 @@ class Open5GSService:
             }
         except Exception as e:
             logger.error(f"Error getting subscriber {imsi}: {e}")
-            return {"success": False, "error": str(e)}
+            return {"success": False, "error": _public_error(e)}
 
     async def add_subscriber(
         self,
@@ -263,7 +276,7 @@ class Open5GSService:
             return {
                 "success": False,
                 "timestamp": self._timestamp(),
-                "error": str(e)
+                "error": _public_error(e)
             }
 
     async def update_subscriber(
@@ -340,7 +353,7 @@ class Open5GSService:
                 }
         except Exception as e:
             logger.error(f"Error updating subscriber {imsi}: {e}")
-            return {"success": False, "error": str(e)}
+            return {"success": False, "error": _public_error(e)}
 
     async def delete_subscriber(self, imsi: str) -> Dict[str, Any]:
         """
@@ -367,7 +380,7 @@ class Open5GSService:
                 }
         except Exception as e:
             logger.error(f"Error deleting subscriber {imsi}: {e}")
-            return {"success": False, "error": str(e)}
+            return {"success": False, "error": _public_error(e)}
 
     async def get_system_status(self) -> Dict[str, Any]:
         """
@@ -950,10 +963,11 @@ class Open5GSService:
         """
         Calculate IP address for device number.
 
-        Uses the 10.48.99.0/24 pool with device_number as last octet.
+        Uses the 10.48.99.0/24 pool with device_number as the last octet,
+        so IMSI ...0011 gets 10.48.99.11. .1 is the UPF gateway, so numbers
+        outside 2-254 are clamped to the ends of the pool.
         """
-        # Ensure device_number is within valid range (2-254)
-        last_octet = max(2, min(254, device_number + 1))
+        last_octet = max(2, min(254, device_number))
         return f"10.48.99.{last_octet}"
 
 

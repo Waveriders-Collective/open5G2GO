@@ -9,7 +9,14 @@ the frontend and backend API.
 """
 
 from typing import Optional, List
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
+
+
+def _blank_to_none(value):
+    """Treat an empty form field as "not provided" rather than an invalid value."""
+    if isinstance(value, str) and not value.strip():
+        return None
+    return value
 
 
 # ============================================================================
@@ -41,6 +48,11 @@ class AddSubscriberRequest(BaseModel):
         description="Static IP address (auto-assigned if not specified)"
     )
 
+    @field_validator("name", "ip", mode="before")
+    @classmethod
+    def blank_fields_to_none(cls, value):
+        return _blank_to_none(value)
+
 
 class UpdateSubscriberRequest(BaseModel):
     """Request body for updating a subscriber."""
@@ -61,6 +73,11 @@ class UpdateSubscriberRequest(BaseModel):
         max_length=50,
         description="New device name"
     )
+
+    @field_validator("ip", "apn", "name", mode="before")
+    @classmethod
+    def blank_fields_to_none(cls, value):
+        return _blank_to_none(value)
 
 
 # ============================================================================

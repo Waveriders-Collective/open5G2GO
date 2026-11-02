@@ -130,7 +130,7 @@ class Open5GSClient:
             logger.info("Connected to MongoDB")
         except ConnectionFailure as e:
             logger.error(f"Failed to connect to MongoDB: {e}")
-            raise MongoDBConnectionError(f"Failed to connect to MongoDB: {e}")
+            raise MongoDBConnectionError("Failed to connect to MongoDB") from e
 
     def disconnect(self) -> None:
         """Close MongoDB connection."""
@@ -163,7 +163,7 @@ class Open5GSClient:
             return list(self.subscribers.find({}, {"_id": 0}))
         except OperationFailure as e:
             logger.error(f"Failed to list subscribers: {e}")
-            raise SubscriberError(f"Failed to list subscribers: {e}")
+            raise SubscriberError("Failed to list subscribers") from e
 
     def get_subscriber(self, imsi: str) -> Optional[Dict[str, Any]]:
         """
@@ -183,7 +183,7 @@ class Open5GSClient:
             return self.subscribers.find_one({"imsi": imsi}, {"_id": 0})
         except OperationFailure as e:
             logger.error(f"Failed to get subscriber {imsi}: {e}")
-            raise SubscriberError(f"Failed to get subscriber: {e}")
+            raise SubscriberError("Failed to get subscriber") from e
 
     def add_subscriber(
         self,
@@ -307,7 +307,7 @@ class Open5GSClient:
             return subscriber
         except OperationFailure as e:
             logger.error(f"Failed to add subscriber {imsi}: {e}")
-            raise SubscriberError(f"Failed to add subscriber: {e}")
+            raise SubscriberError("Failed to add subscriber") from e
 
     def update_subscriber(self, imsi: str, **updates) -> bool:
         """
@@ -360,7 +360,7 @@ class Open5GSClient:
             return False
         except OperationFailure as e:
             logger.error(f"Failed to update subscriber {imsi}: {e}")
-            raise SubscriberError(f"Failed to update subscriber: {e}")
+            raise SubscriberError("Failed to update subscriber") from e
 
     def delete_subscriber(self, imsi: str) -> bool:
         """
@@ -385,7 +385,7 @@ class Open5GSClient:
             return False
         except OperationFailure as e:
             logger.error(f"Failed to delete subscriber {imsi}: {e}")
-            raise SubscriberError(f"Failed to delete subscriber: {e}")
+            raise SubscriberError("Failed to delete subscriber") from e
 
     def get_subscriber_count(self) -> int:
         """Get total number of subscribers."""
@@ -393,7 +393,7 @@ class Open5GSClient:
             return self.subscribers.count_documents({})
         except OperationFailure as e:
             logger.error(f"Failed to count subscribers: {e}")
-            raise SubscriberError(f"Failed to count subscribers: {e}")
+            raise SubscriberError("Failed to count subscribers") from e
 
     def get_system_status(self) -> Dict[str, Any]:
         """

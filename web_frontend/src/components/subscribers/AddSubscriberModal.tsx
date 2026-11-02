@@ -41,7 +41,13 @@ export const AddSubscriberModal: React.FC<AddSubscriberModalProps> = ({
     }
 
     try {
-      const result = await api.addSubscriber(formData);
+      // Leave out a blank IP so the backend auto-assigns one
+      const ip = formData.ip?.trim();
+      const result = await api.addSubscriber({
+        imsi: formData.imsi,
+        name: formData.name,
+        ...(ip ? { ip } : {}),
+      });
       if (result.success) {
         setSuccess(
           `Successfully added ${result.subscriber.name} (IMSI: ${result.subscriber.imsi}, IP: ${result.subscriber.ip})`
