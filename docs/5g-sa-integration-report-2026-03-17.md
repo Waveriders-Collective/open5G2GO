@@ -43,14 +43,16 @@ Changed PLMN from the wizard-configured 999-01 to 999-70 to match the pre-config
 ## 2. Subscriber Provisioning
 
 ### Seneca Pre-Programmed SIMs (from CSV)
+
+SIM credentials are intentionally omitted. Keep actual keys and subscriber backups outside source control.
 Added 4 subscribers from `seneca-sims-08082025.csv`:
 
 | IMSI | Ki | OPc | MSISDN |
 |------|----|----|--------|
-| 999700000009480 | E481A8684ED8473A931FC83B052ED123 | EDABB937F91996AEA689FD8ED3D6D4F4 | 447369029369 |
-| 999700000009481 | 3CB61DE48F7E415CADCFD4D07F75FC42 | 09E320D7A1B5F65A239CDC675BB232EA | 447369029370 |
-| 999700000009482 | 238FCE5300624398A37780B53BF7D2F3 | E788E3C872F8478A8F971D030A0E23A2 | 447369029371 |
-| 999700000009483 | 4F1984F0032F4E34AD0F13DBB0E42E20 | DE256845255655477E7E9A9E7CDAED31 | 447369029372 |
+| 999700000009480 | <YOUR_SIM_KI> | <YOUR_SIM_OPC> | 447369029369 |
+| 999700000009481 | <YOUR_SIM_KI> | <YOUR_SIM_OPC> | 447369029370 |
+| 999700000009482 | <YOUR_SIM_KI> | <YOUR_SIM_OPC> | 447369029371 |
+| 999700000009483 | <YOUR_SIM_KI> | <YOUR_SIM_OPC> | 447369029372 |
 
 **STATUS: AUTH FAILING** — All 4 Seneca SIMs get MAC failure during 5G-AKA authentication. SUCI decryption works (key ID 30 resolved correctly, IMSI visible in UDM debug logs), but the Ki/OPc values from the CSV produce incorrect auth vectors. We tried both `op_type: 2` (OPc) and `op_type: 0` (OP) — neither works. The `amf` (Authentication Management Field) is set to `8000` but the supplier may use a different value. **Needs verification with Seneca.**
 
@@ -68,10 +70,10 @@ Added 4 subscribers from `seneca-sims-08082025.csv`:
   imsi: "999700000009481",
   msisdn: ["447369029370"],
   security: {
-    k: "3CB61DE48F7E415CADCFD4D07F75FC42",
+    k: "<YOUR_SIM_KI>",
     amf: "8000",
     op_type: 2,        // 2 = OPc, 0 = OP
-    op_value: "09E320D7A1B5F65A239CDC675BB232EA",
+    op_value: "<YOUR_SIM_OPC>",
     op: null
   },
   ambr: {

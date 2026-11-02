@@ -20,7 +20,7 @@ import logging
 from datetime import datetime, timezone
 from typing import List, Dict, Optional, Any
 from pathlib import Path
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 logger = logging.getLogger(__name__)
 

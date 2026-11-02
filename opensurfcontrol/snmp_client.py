@@ -17,7 +17,7 @@ Baicells MIB: enterprises.53058 (.1.3.6.1.4.1.53058)
 
 import asyncio
 import logging
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Dict, List, Optional, Any
 
@@ -235,7 +235,8 @@ class BaicellsSNMPClient:
     def _check_pysnmp(self) -> bool:
         """Check if pysnmp is available."""
         try:
-            from pysnmp.hlapi.asyncio import (
+            # Verify that the optional installation exposes every required symbol.
+            from pysnmp.hlapi.asyncio import (  # noqa: F401
                 getCmd, CommunityData, UdpTransportTarget,
                 ContextData, ObjectType, ObjectIdentity
             )

@@ -127,7 +127,7 @@ class Open5GSClient:
             self._client.admin.command('ping')
             self._db = self._client[MONGODB_DATABASE]
             self._subscribers = self._db.subscribers
-            logger.info(f"Connected to MongoDB at {self.uri}")
+            logger.info("Connected to MongoDB")
         except ConnectionFailure as e:
             logger.error(f"Failed to connect to MongoDB: {e}")
             raise MongoDBConnectionError(f"Failed to connect to MongoDB: {e}")

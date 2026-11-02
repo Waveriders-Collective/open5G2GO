@@ -15,7 +15,6 @@ from .models import (
     AddSubscriberRequest,
     UpdateSubscriberRequest,
     HealthCheckResponse,
-    ServicesResponse,
 )
 from .dependencies import get_service
 from ..services.open5gs_service import Open5GSService

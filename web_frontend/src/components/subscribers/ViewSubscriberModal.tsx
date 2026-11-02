@@ -24,6 +24,27 @@ export const ViewSubscriberModal: React.FC<ViewSubscriberModalProps> = ({
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    const fetchDetails = async () => {
+      if (!subscriber) return;
+
+      setLoading(true);
+      setError(null);
+
+      try {
+        const result = await api.getSubscriber(subscriber.imsi);
+        if (result.success) {
+          setDetails(result);
+        } else {
+          setError(result.error || 'Failed to fetch device details');
+        }
+      } catch (err: unknown) {
+        const error = err as { response?: { data?: { error?: string } }; message?: string };
+        setError(error.response?.data?.error || error.message || 'Failed to fetch device details');
+      } finally {
+        setLoading(false);
+      }
+    };
+
     if (isOpen && subscriber) {
       fetchDetails();
     } else {
@@ -31,27 +52,6 @@ export const ViewSubscriberModal: React.FC<ViewSubscriberModalProps> = ({
       setError(null);
     }
   }, [isOpen, subscriber]);
-
-  const fetchDetails = async () => {
-    if (!subscriber) return;
-
-    setLoading(true);
-    setError(null);
-
-    try {
-      const result = await api.getSubscriber(subscriber.imsi);
-      if (result.success) {
-        setDetails(result);
-      } else {
-        setError(result.error || 'Failed to fetch device details');
-      }
-    } catch (err: unknown) {
-      const error = err as { response?: { data?: { error?: string } }; message?: string };
-      setError(error.response?.data?.error || error.message || 'Failed to fetch device details');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   if (!isOpen || !subscriber) return null;
 

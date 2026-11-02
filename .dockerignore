@@ -1,0 +1,17 @@
+.git
+.private-backups
+.venv
+venv
+**/node_modules
+**/dist
+**/__pycache__
+**/.pytest_cache
+**/.ruff_cache
+.env
+.env.*
+**/.env
+**/.env.*
+subscribers_backup*.json
+**/*.key
+config/sas-service-account.json
+*.log

@@ -13,8 +13,8 @@ The setup wizard will prompt you for the following information. Have these ready
 
 | Item | Description | Where to Get It |
 |------|-------------|-----------------|
-| **SIM Ki Key** | 32-character hex authentication key | From your SIM vendor |
-| **SIM OPc Key** | 32-character hex operator key | From your SIM vendor |
+| **SIM Ki Key** | 32-character hex authentication key | From your SIM vendor, or generate for a programmable SIM during setup |
+| **SIM OPc Key** | 32-character hex derived operator key | From your SIM vendor, or derive with Ki and a generated source OP during setup |
 | **PLMN** | Network identity (MCC-MNC) matching your SIMs | Usually 315-010 for US CBRS |
 | **eNodeB/gNodeB IP Address** | Management IP of your base station | From base station web interface or DHCP |
 | **Host IP Address** | IP of the machine running Open5G2GO | Auto-detected, but verify it's reachable from base station |
@@ -28,11 +28,31 @@ curl -fsSL https://raw.githubusercontent.com/Waveriders-Collective/open5G2GO/mai
 ```
 
 This will:
-1. Check system prerequisites
+1. Check required tools and offer to install missing packages with your approval
 2. Clone the repository
 3. Run interactive setup wizard
 4. Pull pre-built Docker images
 5. Start the stack
+
+On Ubuntu and Debian, the installer lists missing packages and asks before running
+`apt-get update` and installing them with `sudo` (or directly when run as root).
+It checks Git, curl, OpenSSL, Docker, Docker Compose, and the Linux networking
+tools used during setup. Missing Docker components are installed using Docker's
+official [Ubuntu](https://docs.docker.com/engine/install/ubuntu/#install-using-the-apt-repository)
+or [Debian](https://docs.docker.com/engine/install/debian/#install-using-the-apt-repository)
+apt-repository instructions, including the signing key when needed. Existing
+packages are not removed, and a full system upgrade is not run.
+Run the command from an interactive terminal; declining the prompt stops before
+the repository is cloned or an existing installation is changed.
+
+If the local Docker service is stopped, the installer asks whether to start it
+with `sudo systemctl start docker` or exit. After approval it starts Docker and
+checks that it is accessible before continuing. A running daemon with a permission
+error is reported separately, with instructions to configure access and log in
+again. Remote and rootless Docker contexts require their own daemon setup; the
+installer only offers to start the local systemd service. On other Linux
+distributions, install missing dependencies using your distribution's package
+manager.
 
 ### Manual Install
 
@@ -133,7 +153,31 @@ Single-page application with:
 
 ## SIM Configuration
 
-You need pre-programmed SIM cards with Ki and OPc authentication keys.
+Use a vendor-programmed SIM with known Ki and OPc, or a SIM you can program with
+matching credentials. Generating new credentials cannot recover the keys on an
+existing SIM.
+
+During full setup, choose either existing Ki/OPc values (saved in `.env` as
+subscriber defaults) or **generate Ki, source OP, and OPc**. Generation uses secure
+random 128-bit Ki and OP values and derives Milenage OPc as
+`AES-128(Ki, OP) XOR OP`, following
+[3GPP TS 35.206](https://www.etsi.org/deliver/etsi_ts/135200_135299/135206/18.00.00_60/ts_135206v180000p.pdf).
+If needed, setup asks permission to install the optional `python3` and
+`python3-cryptography` packages on Ubuntu/Debian.
+
+Generated credentials appear **once, directly in the terminal**. The wizard warns
+you to save all three securely and requires you to type `COPIED` before continuing.
+Blank or other responses repeat only the confirmation prompt; `CANCEL` or end of
+input stops setup before configuration is written. After confirmation, **Ki and
+OPc are saved in `.env`** as the normal subscriber defaults, so web UI provisioning
+works with the generated values. The wizard restricts `.env` and `.env.backup`
+permissions to the owner. Network-only reconfiguration preserves these defaults.
+
+**Source OP is never saved.** It remains in the generator process and its one
+terminal display; it is never returned to the wizard, put in `.env` or backups,
+or passed to Docker. Keep your own secure copy for SIM programming. Terminal
+scrollback or session recording may retain the display. Program your SIM with
+matching credentials before using the subscriber provisioned by the core.
 
 **Requirements:**
 - Ki (Authentication Key) - 32 hex characters
@@ -156,8 +200,8 @@ Need SIMs? Order pre-programmed SIMs at: https://waveriders.live/sims
 ## Development
 
 ### Prerequisites
-- Python 3.10+
-- Node.js 18+
+- Python 3.12+ recommended (minimum 3.11)
+- Node.js 24
 - Docker & Docker Compose
 
 ### Local Development
@@ -177,6 +221,18 @@ cd web_frontend && npm run dev
 ```
 
 ### Testing
+
+The [CI workflow](.github/workflows/ci.yml) checks every pull request and push to
+`main`: Python lint and tests on Python 3.11/3.12, Bash syntax and ShellCheck,
+Compose configuration validation, and frontend lint and production build.
+See [local CI commands](CONTRIBUTING.md#running-ci-checks-locally) to reproduce the checks.
+
+[CodeQL](.github/workflows/codeql.yml) scans Python, JavaScript/TypeScript, and
+GitHub Actions. [Dependency audits](.github/workflows/dependencies.yml) run on
+pull requests, pushes to `main`, and weekly; Dependabot proposes updates after
+its configuration is merged. Operational Ki/OPc
+retrieval for SIM programming remains supported; deployment access controls are
+the operator's choice.
 
 ```bash
 # Run Python tests

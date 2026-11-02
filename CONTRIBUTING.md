@@ -84,6 +84,77 @@ poetry run pytest
 poetry run ruff check .
 ```
 
+## Running CI Checks Locally
+
+GitHub Actions runs checks on pull requests and pushes to `main`. The Python
+matrix uses 3.11 and 3.12 on Ubuntu; frontend checks use Node.js 24. The existing
+Docker publishing workflow runs separately after pushes to `main`.
+
+Use an isolated Python environment to match CI's test and lint tools:
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install -r requirements-ci.txt
+poetry check --lock
+poetry install --with dev --no-interaction --no-ansi
+poetry run ruff check .
+poetry run python -m pytest -q
+```
+
+Application and development packages are pinned in `poetry.lock`; CI and the
+backend image install that lock without regenerating it. The SIM key tests
+require `cryptography`, included in the locked development dependencies.
+Installer and SIM tests use mocks and temporary
+files; they do not install packages or start Docker. The interactive SIM tests
+require a POSIX terminal, so run them on Linux or macOS. Pytest's importlib mode
+and the explicit `tests` package keep test modules separate from application imports.
+
+From the repository root, with Bash, ShellCheck, and Docker Compose installed:
+
+```bash
+for script in install.sh scripts/*.sh; do
+  bash -n "$script"
+done
+shellcheck --severity=warning install.sh scripts/*.sh
+for config in docker-compose*.yml; do
+  docker compose --env-file env.example -f "$config" config --quiet
+done
+```
+
+Compose validation uses the example configuration and does not start containers.
+
+```bash
+cd web_frontend
+npm ci
+npm run lint
+npm run build
+```
+
+Security checks run separately from functional CI. To reproduce the dependency audits:
+
+```bash
+# From the repository root, with the CI tooling installed above
+python scripts/audit-python-lock.py
+pip-audit --requirement requirements-ci.txt
+cd web_frontend
+npm audit --omit=dev --audit-level=low
+npm audit --audit-level=high
+```
+
+Production npm findings fail at every severity. The full npm audit and dependency
+review gate high/critical findings across development and runtime dependencies;
+the known moderate lint-tool advisory is tracked in
+[issue #35](https://github.com/Waveriders-Collective/open5G2GO/issues/35) and is still
+reported, not suppressed. Python audits fail on any known vulnerability.
+The lock audit checks every locked package version without environment markers,
+including alternatives for other Python versions and operating systems.
+Dependency review additionally requires the repository dependency graph and the
+repository variable `DEPENDENCY_REVIEW_ENABLED=true`; the full audits always run.
+CodeQL runs the extended security queries and uploads results to code scanning;
+a successful scan means analysis completed, not that no alerts exist. Merge
+enforcement depends on repository rules configured by a maintainer.
+
 ## Pull Request Process
 
 1. Ensure all tests pass

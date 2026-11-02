@@ -32,7 +32,6 @@ async def lifespan(app: FastAPI):
     """
     # Startup
     logger.info(f"Starting {settings.app_name} v{settings.app_version}")
-    logger.info(f"MongoDB URI: {settings.mongodb_uri}")
     logger.info(f"API prefix: {settings.api_prefix}")
     logger.info(f"Debug mode: {settings.debug}")
 
