@@ -40,6 +40,21 @@ from opensurfcontrol.constants import (
 
 logger = logging.getLogger(__name__)
 
+# SIM secrets in an Open5GS subscriber's "security" block. They are never
+# returned by the API; operators already have Ki/OPc in .env.
+SECRET_SECURITY_FIELDS = ("k", "op", "opc")
+
+
+def _without_sim_secrets(subscriber: Dict[str, Any]) -> Dict[str, Any]:
+    """Copy of a subscriber document with Ki, OP and OPc removed (AMF and SQN kept)."""
+    data = dict(subscriber)
+    if isinstance(data.get("security"), dict):
+        data["security"] = {
+            key: value for key, value in data["security"].items()
+            if key not in SECRET_SECURITY_FIELDS
+        }
+    return data
+
 
 def _public_error(exc: Exception) -> str:
     """
@@ -203,7 +218,7 @@ class Open5GSService:
                 "success": True,
                 "imsi": imsi,
                 "ambr": ambr,
-                "data": subscriber
+                "data": _without_sim_secrets(subscriber)
             }
         except Exception as e:
             logger.error(f"Error getting subscriber {imsi}: {e}")

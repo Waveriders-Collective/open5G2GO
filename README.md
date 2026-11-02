@@ -230,9 +230,8 @@ See [local CI commands](CONTRIBUTING.md#running-ci-checks-locally) to reproduce 
 [CodeQL](.github/workflows/codeql.yml) scans Python, JavaScript/TypeScript, and
 GitHub Actions. [Dependency audits](.github/workflows/dependencies.yml) run on
 pull requests, pushes to `main`, and weekly; Dependabot proposes updates after
-its configuration is merged. Operational Ki/OPc
-retrieval for SIM programming remains supported; deployment access controls are
-the operator's choice.
+its configuration is merged. The API never returns SIM keys; to program SIMs, use
+the Ki and OPc saved in `.env` (see [SIM Configuration](#sim-configuration)).
 
 ```bash
 # Run Python tests
