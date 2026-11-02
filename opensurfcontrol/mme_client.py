@@ -374,9 +374,17 @@ class MMELogParser:
         return [session.to_dict() for session in sessions.values()]
 
     def get_ue_count(self) -> int:
-        """Get count of attached UEs."""
+        """
+        Get count of attached UEs.
+
+        Returns the number of UEs currently in an 'attached' session state,
+        which stays consistent with the Active Connections view. The raw
+        "Number of eNB-UEs is now N" MME log counter is only emitted at
+        attach/detach, so it reads 0 once that line scrolls out of the parsed
+        log window. Mirrors the 5G/AMF fix in commit c8ac8092.
+        """
         self.parse_ue_sessions()
-        return self._enb_ue_count
+        return len(self._ue_sessions)
 
     def get_session_count(self) -> int:
         """Get count of active PDN sessions."""
