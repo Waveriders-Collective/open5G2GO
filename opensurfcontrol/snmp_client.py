@@ -30,6 +30,10 @@ logger = logging.getLogger(__name__)
 BAICELLS_ENTERPRISE_OID = "1.3.6.1.4.1.53058"
 
 # Basic Settings (.100)
+# NOTE: BaiBS_RTS firmware (e.g. BaiBS_RTS_3.7.11.6 on pBS2120) exposes these
+# as plain scalar OIDs (.X.0), not the indexed form (.X.1.0). The indexed OIDs
+# return NoSuchInstance on RTS, which blanked EARFCN/PCI/Cell ID/UE count/
+# throughput/PRB/RF status in the UI. OIDs below are verified against RTS.
 OIDS = {
     # Device Identity
     "product_type": f"{BAICELLS_ENTERPRISE_OID}.100.1.0",
@@ -41,14 +45,14 @@ OIDS = {
     "cell_status": f"{BAICELLS_ENTERPRISE_OID}.100.5.0",
     "band_class": f"{BAICELLS_ENTERPRISE_OID}.100.6.0",
     "carrier_bw_mhz": f"{BAICELLS_ENTERPRISE_OID}.100.7.0",  # 25=5MHz, 50=10MHz, 75=15MHz, 100=20MHz
-    "earfcn": f"{BAICELLS_ENTERPRISE_OID}.100.8.1.0",
-    "pci": f"{BAICELLS_ENTERPRISE_OID}.100.12.1.0",
-    "cell_id": f"{BAICELLS_ENTERPRISE_OID}.100.13.1.0",
+    "earfcn": f"{BAICELLS_ENTERPRISE_OID}.100.8.0",
+    "pci": f"{BAICELLS_ENTERPRISE_OID}.100.12.0",
+    "cell_id": f"{BAICELLS_ENTERPRISE_OID}.100.13.0",
     "tac": f"{BAICELLS_ENTERPRISE_OID}.100.15.0",
     "s1_link_status": f"{BAICELLS_ENTERPRISE_OID}.100.21.0",  # 0=Down, 1=Up
 
     # UE Connections
-    "ue_connections": f"{BAICELLS_ENTERPRISE_OID}.100.11.1.0",
+    "ue_connections": f"{BAICELLS_ENTERPRISE_OID}.100.11.0",
     "ue_connections_cell2": f"{BAICELLS_ENTERPRISE_OID}.100.11.2.0",
 
     # Network
@@ -69,10 +73,10 @@ OIDS = {
     "ho_s1_success_rate": f"{BAICELLS_ENTERPRISE_OID}.190.4.0",  # %
     "ho_success_rate": f"{BAICELLS_ENTERPRISE_OID}.190.5.0",  # %
     "rrc_success_rate": f"{BAICELLS_ENTERPRISE_OID}.190.6.0",  # %
-    "ul_throughput": f"{BAICELLS_ENTERPRISE_OID}.190.7.1.0",  # kbps
-    "dl_throughput": f"{BAICELLS_ENTERPRISE_OID}.190.8.1.0",  # kbps
-    "ul_prb_utilization": f"{BAICELLS_ENTERPRISE_OID}.190.9.1.0",  # %
-    "dl_prb_utilization": f"{BAICELLS_ENTERPRISE_OID}.190.10.1.0",  # %
+    "ul_throughput": f"{BAICELLS_ENTERPRISE_OID}.190.7.0",  # kbps
+    "dl_throughput": f"{BAICELLS_ENTERPRISE_OID}.190.8.0",  # kbps
+    "ul_prb_utilization": f"{BAICELLS_ENTERPRISE_OID}.190.9.0",  # %
+    "dl_prb_utilization": f"{BAICELLS_ENTERPRISE_OID}.190.10.0",  # %
 
     # LTE Settings
     "tx_power": f"{BAICELLS_ENTERPRISE_OID}.140.100.6.0",
@@ -81,7 +85,7 @@ OIDS = {
     "max_tx_power": f"{BAICELLS_ENTERPRISE_OID}.140.100.10.0",
 
     # Control
-    "rf_status": f"{BAICELLS_ENTERPRISE_OID}.270.1.1.0",  # 0=Off, 1=On
+    "rf_status": f"{BAICELLS_ENTERPRISE_OID}.270.1.0",  # 0=Off, 1=On
 }
 
 # Bandwidth mapping
