@@ -388,6 +388,7 @@ GET /api/v1/enodeb/status
     "available": false,
     "enabled": false,
     "reachable_count": 0,
+    "configured_count": 1,
     "enodebs": []
   },
   "network": {
@@ -397,23 +398,6 @@ GET /api/v1/enodeb/status
     "tac": "1",
     "network_name": "Open5G2GO"
   }
-}
-```
-
-### Refresh eNodeB Status
-
-Force a refresh of eNodeB status data.
-
-```
-POST /api/v1/enodeb/refresh
-```
-
-**Response:**
-```json
-{
-  "success": true,
-  "message": "SAS status refreshed",
-  "timestamp": "2024-01-15 10:30:00 UTC"
 }
 ```
 
